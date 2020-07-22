@@ -1,0 +1,30 @@
+{
+    # Classic acceleration ceilings in mm/s2.
+    # Will be retrieved from the device on startup.
+    acceleration: [1500, 1000, 100, 10000]
+
+    # Steps per mm needed for each axis.
+    # Will be retrieved from the device on startup.
+    steps-per-mm: [80, 80, 1600, 400]
+
+    # Classic jerk allowance.
+    jerk: [7, 5, 0.2, 2.5]
+
+    # Definitive ceiling for 'real' per-axis jerk used with s-curve velocity.
+    # These values are used to determine the acceleration curves and are given in mm/s3.
+    s-jerk: [1e8, 1e7, 1e6, 1e10]
+
+    ###
+    ### The below settings are ideal for a 16MHz 8-bit AVR device with an RPi B+.
+    ###
+
+    # Constant ticks/s carrier frequency for stepper action.
+    ticks-per-second: 61440
+
+    # Direct Stepping page format used (must match the firmware configuration).
+    format: "SP_4x2_256"
+
+    # Used for bed leveling.
+    bed-max-x: 200
+    bed-max-y: 200
+}

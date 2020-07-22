@@ -1,0 +1,6 @@
+github.com/colinrgodsey/serial v0.0.0-20200720155734-acf578228fea h1:ZUiBmoT1t3vwJ583oIzmcH6rIPlwS28rkMzZ66RowUM=
+github.com/colinrgodsey/serial v0.0.0-20200720155734-acf578228fea/go.mod h1:s6CTMHx/NV6uFgGR6LhBb6Ex71S3Z5KH2baxm4KLzn8=
+github.com/hjson/hjson-go v3.0.1+incompatible h1:JwOXblcMiBbiWue7iPkoFK9oXSnW8n+qXh/0Fio6TCo=
+github.com/hjson/hjson-go v3.0.1+incompatible/go.mod h1:qsetwF8NlsTsOTwZTApNlTCerV+b2GjYRRcIk4JMFio=
+golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae h1:Ih9Yo4hSPImZOpfGuA4bR/ORKTAbhZo2AbWNRCnevdo=
+golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
