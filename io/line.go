@@ -27,9 +27,6 @@ const (
 // control protocol signaled by the ControlChar.
 // Only capable of reading 'response' format control data.
 func LinePipe(reader io.Reader, writer io.Writer, c Conn) error {
-	ccb := []byte(string(ControlChar))[0]
-	elb := []byte(string(endLine))[0]
-
 	err := make(chan error, 4)
 	stopWrite := make(chan struct{})
 
@@ -48,7 +45,7 @@ func LinePipe(reader io.Reader, writer io.Writer, c Conn) error {
 			case lerr != nil:
 				err <- lerr
 				return
-			case pb[0] == ccb:
+			case pb[0] == ControlChar:
 				bytes := make([]byte, 0, ControlLineLength)
 				reader.ReadByte() // discard control char
 				for i := 0; i < ControlLineLength; i++ {
@@ -90,9 +87,9 @@ func LinePipe(reader io.Reader, writer io.Writer, c Conn) error {
 			switch v := data.(type) {
 			case []byte:
 				bytes := make([]byte, 0, len(v)+2)
-				bytes = append(bytes, ccb)
+				bytes = append(bytes, ControlChar)
 				bytes = append(bytes, v...)
-				bytes = append(bytes, elb)
+				bytes = append(bytes, endLine)
 				if _, lerr := writer.Write(bytes); lerr != nil {
 					err <- lerr
 					return

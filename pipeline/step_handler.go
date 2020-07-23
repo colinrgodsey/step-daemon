@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/colinrgodsey/step-daemon/config"
@@ -51,6 +52,7 @@ type stepHandler struct {
 	stepsPerMM     vec.Vec4
 	ticksPerSecond int
 	eAdvanceK      float64
+	flowRate       float64
 
 	pos  [4]int64
 	dir  [4]bool
@@ -72,7 +74,16 @@ func (h *stepHandler) headRead(msg io.Any) {
 		switch {
 		case msg.IsG(92): // set pos
 			h.setPos(msg)
+		case msg.IsM(221): // set flow rate
+			if f, ok := msg.Args.GetFloat('S'); ok {
+				flowRate := f / 100.0
+				h.head.Write(fmt.Sprintf("info:setting flow rate to %v", flowRate))
+			}
 		}
+	case physics.MotionBlock:
+		h.procBlock(msg)
+	case config.Config:
+		h.configUpdate(msg)
 	}
 	h.tail.Write(msg)
 }
@@ -127,8 +138,7 @@ func (h *stepHandler) procSegmentSP4x4D128(ds [4]int) {
 	b |= (byte(ds[2]+7) & 0xF) << 4
 	b |= byte(ds[3]+7) & 0xF
 
-	h.currentChunk[h.segmentIdx*2] = a
-	h.currentChunk[h.segmentIdx*2+1] = b
+	h.currentChunk = append(h.currentChunk, a, b)
 	h.segmentIdx++
 }
 
@@ -139,25 +149,26 @@ func (h *stepHandler) procSegmentSP4x2256(ds [4]int) {
 		if d < 0 {
 			d = -d
 		}
-		a |= (byte(d) & 0x3) << (i * 2)
+		a |= (byte(d) & 0x3) << uint(i*2)
 	}
 
-	h.currentChunk[h.segmentIdx] = a
+	h.currentChunk = append(h.currentChunk, a)
 	h.segmentIdx++
 }
 
 func (h *stepHandler) procSegmentSP4x1512(ds [4]int) {
-	a := h.currentChunk[h.segmentIdx/2]
+	var a byte
 	for i, d := range ds {
 		i = 3 - i
-		if h.segmentIdx&1 == 1 {
-			i += 4
-		}
 		if d != 0 {
-			a |= 1 << i
+			a |= 1 << uint(i)
 		}
 	}
-	h.currentChunk[h.segmentIdx/2] = a
+	if h.segmentIdx&1 == 1 {
+		h.currentChunk[h.segmentIdx/2] |= a << 4
+	} else {
+		h.currentChunk = append(h.currentChunk, a)
+	}
 	h.segmentIdx++
 }
 
@@ -182,10 +193,17 @@ func (h *stepHandler) procBlock(block physics.MotionBlock) {
 		zOffs := 0.0 //TODO: leveling
 
 		for i := range stepDest {
-			x := pos.GetAt(i) * h.stepsPerMM.GetAt(i)
+			offs := 0.0
+			scale := 1.0
+			switch i {
+			case 2:
+				offs = zOffs
+			case 3:
+				scale = h.flowRate
+			}
+			x := (pos.GetAt(i) + offs) * h.stepsPerMM.GetAt(i) * scale
 			stepDest[i] = int64(math.Round(x))
 		}
-		stepDest[2] += int64(math.Round(zOffs * h.stepsPerMM.GetAt(2)))
 
 		for i := range stepDest {
 			ds[i] = int(stepDest[i] - h.pos[i])
@@ -197,6 +215,8 @@ func (h *stepHandler) procBlock(block physics.MotionBlock) {
 }
 
 func (h *stepHandler) configUpdate(conf config.Config) {
+	h.stepsPerMM = conf.StepsPerMM
+	h.ticksPerSecond = conf.TicksPerSecond
 	h.formatName = conf.Format
 	h.format = pageFormats[h.formatName]
 

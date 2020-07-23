@@ -1,6 +1,10 @@
 package physics
 
-import "github.com/colinrgodsey/step-daemon/vec"
+import (
+	"fmt"
+
+	"github.com/colinrgodsey/step-daemon/vec"
+)
 
 type Move struct {
 	from, to   vec.Vec4
@@ -44,6 +48,14 @@ func (m *Move) Vel() vec.Vec4 {
 
 func (m *Move) Time() float64 {
 	return m.time
+}
+
+func (m *Move) Scale(scale float64) Move {
+	return NewMove(m.from, m.to, m.fr*scale)
+}
+
+func (m *Move) String() string {
+	return fmt.Sprintf("{%v -> %v (fr: %v)}", m.from, m.to, m.fr)
 }
 
 func (m *Move) IsEOrZOnly() bool {

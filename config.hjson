@@ -16,6 +16,7 @@
 
     ###
     ### The below settings are ideal for a 16MHz 8-bit AVR device with an RPi B+.
+    ### Ticks per second recommended between 61440 and 69632.
     ###
 
     # Constant ticks/s carrier frequency for stepper action.

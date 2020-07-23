@@ -1,12 +1,19 @@
 package pipeline
 
 import (
+	"fmt"
 	"math"
 
+	"github.com/colinrgodsey/step-daemon/config"
 	"github.com/colinrgodsey/step-daemon/gcode"
 	"github.com/colinrgodsey/step-daemon/io"
 	"github.com/colinrgodsey/step-daemon/physics"
 	"github.com/colinrgodsey/step-daemon/vec"
+)
+
+const (
+	maxResizes  = 100
+	resizeScale = 0.8
 )
 
 type physicsHandler struct {
@@ -21,19 +28,22 @@ func (h *physicsHandler) headRead(msg io.Any) {
 	switch msg := msg.(type) {
 	case physics.Move:
 		if msg.IsEOrZOnly() {
+			h.endBlock()
 			h.procMove(msg)
+			h.endBlock()
 		} else {
-			h.endBlock()
 			h.procMove(msg)
-			h.endBlock()
 		}
 		return
 	case gcode.GCode:
+		h.endBlock()
 		switch {
 		case msg.IsM(201): // set max accel
 			h.acc = msg.Args.GetVec4(h.acc)
 		}
-		h.endBlock()
+	case config.Config:
+		h.sJerk = msg.SJerk
+		h.acc = msg.Acceleration
 	}
 	h.tail.Write(msg)
 }
@@ -49,7 +59,7 @@ and the acceleration vector. Because both of these have positive-only values for
 the dot product produced is between 0 and acc.length. Should never be 0 for real values.
 Invalid pre or post moves force a junction fr of 0.
 */
-func (h *physicsHandler) createBlock(pre, move, post physics.Move, useATrap bool) (physics.MotionBlock, error) {
+func (h *physicsHandler) createBlock(pre, move, post physics.Move, useSTrap bool) (physics.MotionBlock, error) {
 	calcJerk := func(x vec.Vec4) float64 {
 		if x.Dist() < physics.Eps {
 			return h.sJerk.Dist()
@@ -57,7 +67,7 @@ func (h *physicsHandler) createBlock(pre, move, post physics.Move, useATrap bool
 		return x.Abs().Norm().Dot(h.sJerk)
 	}
 
-	//TODO: classic jerk is broken...
+	//TODO: classic jerk allowance is broken...
 	dvStart := move.Vel().Sub(pre.Vel())
 	frStartJerk := calcJerk(dvStart)
 	frMaxStart := math.Min(pre.Fr(), move.Fr())
@@ -81,21 +91,72 @@ func (h *physicsHandler) createBlock(pre, move, post physics.Move, useATrap bool
 
 	frDeccel := -frAccel
 
-	/*
-		TODO: redo the lookahead stuff. we cant modify pre ever, so pre-ease means we
-		slow down the middle move, post-ease means we slow the post move
-	*/
-
-	return physics.STrapBlock(
-		frStart, frStartJerk, frAccel, frJerk, move,
-		frDeccel, frEndJerk, frEnd)
+	if useSTrap {
+		return physics.STrapBlock(
+			frStart, frStartJerk, frAccel, frJerk, move,
+			frDeccel, frEndJerk, frEnd)
+	} else {
+		return physics.TrapBlock(
+			frStart, frAccel, move, frDeccel, frEnd)
+	}
 }
 
-func (h *physicsHandler) procMove(m physics.Move) {
+/*
+This function takes the next move, and comares it to the
+"last" move (has already been sent, can not be modified)
+and "current" move (staged but not sent, can still be modified).
+The "next" move here can also be modified.
 
+A "pre" fault here will slow down the current move, a "post" fault
+here will slow down the next move.
+
+Slowing the target fr *does not* effect either juction fr.
+*/
+func (h *physicsHandler) procMoveSafe(next physics.Move, useSTrap bool) bool {
+	defer func() {
+		h.pushMove(next)
+	}()
+
+	if !h.curMove.IsValid() {
+		return true // move is empty, no motion block needed
+	}
+
+	for i := 0; i < maxResizes; i++ {
+		block, err := h.createBlock(h.lastMove, h.curMove, next, useSTrap)
+
+		//TODO: better resize logic
+		switch err {
+		case physics.ErrEaseLimitPre:
+			h.curMove = h.curMove.Scale(resizeScale / float64(i+1))
+		case physics.ErrEaseLimitPost:
+			next = next.Scale(resizeScale / float64(i+1))
+		case nil:
+			h.tail.Write(block)
+			return true
+		}
+	}
+	return false
+}
+
+func (h *physicsHandler) procMove(next physics.Move) {
+	if h.procMoveSafe(next, true) {
+		return
+	}
+	h.head.Write("warn:failed to apply s-curve easing")
+	if h.procMoveSafe(next, false) {
+		return
+	}
+	panic(fmt.Sprintf("Failed to ease FR for block. Pre: %v, Move: %v, Post: %v", &h.lastMove, &h.curMove, &next))
+}
+
+func (h *physicsHandler) pushMove(next physics.Move) {
+	h.lastMove = h.curMove
+	h.curMove = next
 }
 
 func (h *physicsHandler) endBlock() {
+	h.procMove(physics.Move{})
+	h.procMove(physics.Move{})
 	h.procMove(physics.Move{})
 }
 

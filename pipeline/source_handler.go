@@ -38,6 +38,7 @@ func SourceHandler(head, tail io.Conn) {
 			switch g.Num {
 			case -1:
 				head.Write("ok")
+				//head.Write(str)
 			default:
 				head.Write(fmt.Sprintf("ok N%v", g.Num))
 			}
@@ -45,8 +46,9 @@ func SourceHandler(head, tail io.Conn) {
 	}
 
 	for msg := range tail.Rc() {
+		//TODO: device restart fun
 		if str := msg.(string); str == "pages_ready" && !started {
-			head.Write("info: device ready for paged data, starting...")
+			head.Write("info:device ready for paged data, starting...")
 			started = true
 			go readFunc()
 		}

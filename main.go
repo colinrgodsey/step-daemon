@@ -5,15 +5,21 @@ import (
 	gio "io"
 	"os"
 	"os/signal"
+	"runtime/trace"
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/colinrgodsey/serial"
 	"github.com/colinrgodsey/step-daemon/config"
 	"github.com/colinrgodsey/step-daemon/io"
 	"github.com/colinrgodsey/step-daemon/pipeline"
+
+	"github.com/pkg/profile"
 )
+
+const readBufferSize = 24
 
 type argMap map[string]string
 
@@ -32,11 +38,11 @@ func handler(head io.Conn, size int, h func(head, tail io.Conn)) (tail io.Conn) 
 }
 
 func stepdPipeline(c io.Conn) io.Conn {
-	c = handler(c, 8, pipeline.SourceHandler)
-	c = handler(c, 8, pipeline.DeltaHandler)
-	c = handler(c, 8, pipeline.PhysicsHandler)
-	c = handler(c, 8, pipeline.StepHandler)
-	c = handler(c, 8, pipeline.DeviceHandler)
+	c = handler(c, 1, pipeline.SourceHandler)
+	c = handler(c, 1, pipeline.DeltaHandler)
+	c = handler(c, 1, pipeline.PhysicsHandler)
+	c = handler(c, pipeline.NumPages, pipeline.StepHandler)
+	c = handler(c, pipeline.MaxPendingCommands, pipeline.DeviceHandler)
 	return c
 }
 
@@ -55,7 +61,7 @@ func bailArgs() {
 	os.Exit(1)
 }
 
-func main() {
+func main0() {
 	args := loadArgs()
 
 	if !args.has("config") || !args.has("device") || !args.has("baud") {
@@ -68,6 +74,21 @@ func main() {
 		os.Exit(1)
 	}
 
+	if args.has("trace") {
+		trace.Start(os.Stderr)
+		defer trace.Stop()
+	}
+
+	if args.has("prof") {
+		st := profile.Start()
+
+		go func() {
+			time.Sleep(20 * time.Second)
+			st.Stop()
+			os.Exit(0)
+		}()
+	}
+
 	c := io.NewConn(8, 8)
 	c.Write(conf)
 	go io.LinePipe(os.Stdin, os.Stdout, c.Flip())
@@ -75,14 +96,12 @@ func main() {
 	tailSink(c, args)
 }
 
-func closeOnExit(h gio.Closer) {
+func closeOnExit(closer func()) {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		fmt.Println("info: closing device serial")
-		h.Close()
-		os.Exit(0)
+		closer()
 	}()
 }
 
@@ -112,11 +131,19 @@ func tailSink(c io.Conn, args argMap) {
 
 	cfg := &serial.Config{Name: args["device"], Baud: baud}
 	tail, err = serial.OpenPort(cfg)
-	closeOnExit(tail)
+	closeOnExit(func() {
+		fmt.Println("info:closing device serial")
+		tail.Close()
+		time.Sleep(3000)
+	})
 
 	if err != nil {
 		panic(fmt.Sprintf("Failed to open dest file %v: %v", os.Args[1], err))
 	}
 
 	io.LinePipe(tail, tail, c)
+}
+
+func main() {
+	main0()
 }

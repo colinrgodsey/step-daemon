@@ -14,7 +14,7 @@ type Config struct {
 	Jerk           vec.Vec4 `json:"jerk"`
 	SJerk          vec.Vec4 `json:"s-jerk"`
 	StepsPerMM     vec.Vec4 `json:"steps-per-mm"`
-	TicksPerSecond float64  `json:"ticks-per-second"`
+	TicksPerSecond int      `json:"ticks-per-second"`
 	Format         string   `json:"format"`
 }
 

@@ -12,11 +12,11 @@ import (
 	"github.com/colinrgodsey/step-daemon/vec"
 )
 
-const syncTimeout = 10 // seconds
+const syncTimeout = 20 // seconds
 
 type deltaHandler struct {
 	head, tail io.Conn
-	syncC      chan interface{}
+	syncC      chan vec.Vec4
 
 	pos         vec.Vec4
 	fr, frScale float64
@@ -27,9 +27,15 @@ func (h *deltaHandler) headRead(msg io.Any) {
 	switch msg := msg.(type) {
 	case gcode.GCode:
 		switch {
-		/*case msg.IsG(0), msg.IsG(1): // move
-		h.procGMove(msg)
-		return*/
+		case msg.IsG(0), msg.IsG(1): // move
+			h.procGMove(msg)
+			return
+		case msg.IsG(28): // home
+			//forward home command, then get pos
+			defer h.headRead(gcode.New('G', 114))
+		case msg.IsG(29): // z probe
+			//TODO: send verbose version
+			defer h.headRead(gcode.New('G', 114))
 		case msg.IsG(90): // set absolute
 			h.info("setting to absolute coords")
 			h.abs = true
@@ -40,10 +46,11 @@ func (h *deltaHandler) headRead(msg io.Any) {
 			h.pos = msg.Args.GetVec4(h.pos)
 		case msg.IsM(114): // get pos
 			h.info("syncing with device position")
-			h.syncC = make(chan interface{})
+			h.syncC = make(chan vec.Vec4)
 			h.tail.Write(msg)
 			select {
-			case <-h.syncC:
+			case pos := <-h.syncC:
+				h.pos = pos
 			case <-time.After(syncTimeout * time.Second):
 				panic("timed out while syncing position")
 			}
@@ -52,7 +59,7 @@ func (h *deltaHandler) headRead(msg io.Any) {
 		case msg.IsM(220): // set feedrate
 			if x, ok := msg.Args.GetFloat('S'); ok {
 				h.frScale = x / 100.0
-				h.info("setting fr scale to %v", x)
+				h.info("setting feedrate scale to %v", h.frScale)
 			}
 		}
 	}
@@ -81,10 +88,10 @@ func (h *deltaHandler) tailRead(msg io.Any) {
 			e, err := strconv.ParseFloat(string(spl[3][2:]), 64)
 			bailParse(err)
 
-			h.info("syncd with device position")
-			h.pos = vec.NewVec4(x, y, z, e)
+			//TODO: still not happy about this pattern
 			if h.syncC != nil {
-				h.syncC <- nil
+				h.info("syncd with device position")
+				h.syncC <- vec.NewVec4(x, y, z, e)
 			}
 		}
 	}
@@ -99,7 +106,7 @@ func (h *deltaHandler) procGMove(g gcode.GCode) {
 		newPos = g.Args.GetVec4(vec.Vec4{}).Add(h.pos)
 	}
 	if f, ok := g.Args.GetFloat('F'); ok {
-		h.fr = f
+		h.fr = f * h.frScale / 60.0
 	}
 	if newPos.Eq(h.pos) {
 		return
@@ -115,7 +122,7 @@ func (h *deltaHandler) procGMove(g gcode.GCode) {
 }
 
 func (h *deltaHandler) info(s string, args ...interface{}) {
-	h.head.Write(fmt.Sprintf("info: "+s, args...))
+	h.head.Write(fmt.Sprintf("info:"+s, args...))
 }
 
 func DeltaHandler(head, tail io.Conn) {

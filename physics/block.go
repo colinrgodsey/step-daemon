@@ -70,7 +70,8 @@ func STrapBlock(
 		frStart)
 
 	if !shape.IsValid() {
-		if pre.Dt() > post.Dt() {
+		//if pre.Dt() > post.Dt() || post.Dt() < Eps {
+		if move.Fr() > frEnd {
 			return nil, ErrEaseLimitPre
 		}
 		return nil, ErrEaseLimitPost
@@ -88,7 +89,8 @@ func TrapBlock(frStart, frAccel float64, move Move, frDeccel, frEnd float64) (Mo
 		frStart)
 
 	if !shape.IsValid() {
-		if pre.Dt() > post.Dt() {
+		//if pre.Dt() > post.Dt() || post.Dt() < Eps {
+		if move.Fr() > frEnd {
 			return nil, ErrEaseLimitPre
 		}
 		return nil, ErrEaseLimitPost

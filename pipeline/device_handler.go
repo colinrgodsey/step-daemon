@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/colinrgodsey/step-daemon/config"
 	"github.com/colinrgodsey/step-daemon/gcode"
 	"github.com/colinrgodsey/step-daemon/io"
 )
@@ -15,9 +16,10 @@ const (
 	pOk      = 2
 	pFail    = 3
 
-	numPages           = 16
-	maxPendingCommands = 4
-	maxN               = 99
+	NumPages           = 16
+	MaxPendingCommands = 4
+
+	maxN = 99
 )
 
 type pagePlaceholder int
@@ -28,8 +30,8 @@ type deviceHandler struct {
 	head, tail io.Conn
 
 	q      list.List
-	states [numPages]pageState
-	pages  [numPages]PageData
+	states [NumPages]pageState
+	pages  [NumPages]PageData
 
 	pendingCommands int
 	n               int
@@ -59,6 +61,8 @@ func (h *deviceHandler) headRead(msg io.Any) {
 	switch msg := msg.(type) {
 	case PageData:
 		h.pushPage(msg)
+	case config.Config:
+		h.head.Write("info:config processed")
 	default:
 		h.q.PushBack(msg)
 	}
@@ -73,9 +77,10 @@ func (h *deviceHandler) tailRead(msg io.Any) {
 		if strings.Index(msg, "ok") == 0 {
 			h.pendingCommands--
 			if h.pendingCommands < 0 {
-				h.head.Write("warning:pending OK count dropped below 0")
+				h.head.Write("warn:pending OK count dropped below 0")
 				h.pendingCommands = 0
 			}
+			h.head.Write("info:" + msg)
 		} else {
 			h.head.Write(msg)
 		}
@@ -86,13 +91,12 @@ func (h *deviceHandler) tailRead(msg io.Any) {
 }
 
 func (h *deviceHandler) drain() {
-	for h.q.Len() > 0 && h.pendingCommands < maxPendingCommands {
+	for h.q.Len() > 0 && h.pendingCommands < MaxPendingCommands {
 		e := h.q.Front()
 		switch msg := e.Value.(type) {
 		case pagePlaceholder:
 			if h.states[msg] != pOk {
-				// block queue until page is confirmed
-				return
+				return // block queue until page is confirmed
 			}
 			h.sendG6(msg)
 		case gcode.GCode:
@@ -110,7 +114,7 @@ func (h *deviceHandler) sendGCode(g gcode.GCode) {
 	g.Num = h.n
 	h.n++
 	str := g.String()
-	//h.head.Write("info:writing: " + str)
+	//h.head.Write("info:send " + str)
 	h.tail.Write(str)
 	h.pendingCommands++
 }
@@ -118,7 +122,7 @@ func (h *deviceHandler) sendGCode(g gcode.GCode) {
 func (h *deviceHandler) updatePageStates(msg []byte) {
 	for i, s0 := range h.states {
 		byteIdx := i / 4
-		bitIdx := (i * 2) % 8
+		bitIdx := uint((i * 2) % 8)
 		s1 := pageState((msg[byteIdx] >> bitIdx) & 3)
 		if !transValid(s0, s1) {
 			continue
@@ -128,6 +132,7 @@ func (h *deviceHandler) updatePageStates(msg []byte) {
 			h.sendPage(i) // resend
 			continue      // dont set free state
 		case s0 == pWriting && s1 == pFail:
+			h.head.Write("warn:unlocking failed page")
 			h.sendUnlock(i)
 		case s1 == pFree:
 			h.pages[i] = PageData{} // clear
@@ -227,7 +232,7 @@ func (h *deviceHandler) sendG6(idx pagePlaceholder) {
 }
 
 func (h *deviceHandler) shouldRead() bool {
-	if h.pendingCommands >= maxPendingCommands {
+	if h.pendingCommands >= MaxPendingCommands {
 		return false
 	}
 	nFree, _ := h.freePages()
