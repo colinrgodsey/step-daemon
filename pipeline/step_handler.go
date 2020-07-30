@@ -12,39 +12,7 @@ import (
 	"github.com/colinrgodsey/step-daemon/vec"
 )
 
-var pageFormats = map[string]pageFormat{
-	"SP_4x4D_128": {
-		directional:     true,
-		bytes:           256,
-		segments:        128,
-		segmentSteps:    8,
-		maxSegmentSteps: 7,
-	},
-
-	"SP_4x2_256": {
-		directional:     false,
-		bytes:           256,
-		segments:        256,
-		segmentSteps:    4,
-		maxSegmentSteps: 3,
-	},
-
-	"SP_4x1_512": {
-		directional:     false,
-		bytes:           256,
-		segments:        512,
-		segmentSteps:    1,
-		maxSegmentSteps: 1,
-	},
-}
-
-type pageFormat struct {
-	directional     bool
-	bytes           int
-	segments        int
-	segmentSteps    int
-	maxSegmentSteps int
-}
+const segmentSplit = "warn:step segment split"
 
 type stepHandler struct {
 	head, tail io.Conn
@@ -58,9 +26,9 @@ type stepHandler struct {
 	dir  [4]bool
 	vPos vec.Vec4
 
-	formatName   string
-	format       pageFormat
-	procSegment0 func([4]int)
+	formatName       string
+	format           config.PageFormat
+	procSegmentBytes func([4]int)
 
 	currentChunk []byte
 	segmentIdx   int
@@ -99,9 +67,9 @@ func (h *stepHandler) flushChunk() {
 
 func (h *stepHandler) getPageData() PageData {
 	return PageData{
-		Steps:   h.format.segmentSteps * (h.segmentIdx % h.format.segments),
+		Steps:   h.format.SegmentSteps * (h.segmentIdx % h.format.Segments),
 		Speed:   h.ticksPerSecond,
-		HasDirs: !h.format.directional,
+		HasDirs: !h.format.Directional,
 		Dirs:    h.dir,
 		Data:    h.currentChunk,
 	}
@@ -131,7 +99,7 @@ func (h *stepHandler) checkDirection(ds [4]int) {
 	}
 }
 
-func (h *stepHandler) procSegmentSP4x4D128(ds [4]int) {
+func (h *stepHandler) procSegmentBytesSP4x4D128(ds [4]int) {
 	var a, b byte
 	a |= (byte(ds[0]+7) & 0xF) << 4
 	a |= byte(ds[1]+7) & 0xF
@@ -142,7 +110,7 @@ func (h *stepHandler) procSegmentSP4x4D128(ds [4]int) {
 	h.segmentIdx++
 }
 
-func (h *stepHandler) procSegmentSP4x2256(ds [4]int) {
+func (h *stepHandler) pprocSegmentBytesSP4x2256(ds [4]int) {
 	var a byte
 	for i, d := range ds {
 		i = 3 - i
@@ -156,7 +124,7 @@ func (h *stepHandler) procSegmentSP4x2256(ds [4]int) {
 	h.segmentIdx++
 }
 
-func (h *stepHandler) procSegmentSP4x1512(ds [4]int) {
+func (h *stepHandler) procSegmentBytesSP4x1512(ds [4]int) {
 	var a byte
 	for i, d := range ds {
 		i = 3 - i
@@ -173,18 +141,38 @@ func (h *stepHandler) procSegmentSP4x1512(ds [4]int) {
 }
 
 func (h *stepHandler) procSegment(ds [4]int) {
-	//TODO: this will need some extra protection to make sure the segment isn't too large
-	if !h.format.directional {
+	ia := func(i int) int {
+		if i < 0 {
+			return -i
+		}
+		return i
+	}
+
+	if !h.format.Directional {
 		h.checkDirection(ds)
 	}
-	h.procSegment0(ds)
-	if h.segmentIdx == h.format.segments {
+	for _, d := range ds {
+		if ia(d) > h.format.MaxSegmentSteps {
+			// splits should be very rare, but still happen
+			h.head.Write(segmentSplit)
+			var ds0 [4]int
+			for i := range ds {
+				ds0[i] = ds[i] / 2
+				ds[i] -= ds0[i]
+			}
+			h.procSegment(ds0)
+			h.procSegment(ds)
+			return
+		}
+	}
+	h.procSegmentBytes(ds)
+	if h.segmentIdx == h.format.Segments {
 		h.flushChunk()
 	}
 }
 
 func (h *stepHandler) procBlock(block physics.MotionBlock) {
-	samplesPerSecond := float64(h.ticksPerSecond) / float64(h.format.segmentSteps)
+	samplesPerSecond := float64(h.ticksPerSecond) / float64(h.format.SegmentSteps)
 
 	for pos := range physics.BlockIterator(block, samplesPerSecond, h.eAdvanceK) {
 		var stepDest [4]int64
@@ -218,15 +206,15 @@ func (h *stepHandler) configUpdate(conf config.Config) {
 	h.stepsPerMM = conf.StepsPerMM
 	h.ticksPerSecond = conf.TicksPerSecond
 	h.formatName = conf.Format
-	h.format = pageFormats[h.formatName]
+	h.format = config.GetPageFormat(h.formatName)
 
 	switch h.formatName {
 	case "SP_4x4D_128":
-		h.procSegment0 = h.procSegmentSP4x4D128
+		h.procSegmentBytes = h.procSegmentBytesSP4x4D128
 	case "SP_4x2_256":
-		h.procSegment0 = h.procSegmentSP4x2256
+		h.procSegmentBytes = h.pprocSegmentBytesSP4x2256
 	case "SP_4x1_512":
-		h.procSegment0 = h.procSegmentSP4x1512
+		h.procSegmentBytes = h.procSegmentBytesSP4x1512
 	default:
 		panic("Unknown page format " + h.formatName)
 	}

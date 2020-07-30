@@ -50,7 +50,7 @@ func (v Vec4) getSetBit(bit int) bool {
 
 /* Methods */
 
-// Add v+o and return result
+// Add o to v
 func (v Vec4) Add(o Vec4) (res Vec4) {
 	for i := range v.v {
 		res.v[i] = v.v[i] + o.v[i]
@@ -59,12 +59,12 @@ func (v Vec4) Add(o Vec4) (res Vec4) {
 	return
 }
 
-// Sub v-o and return result
+// Sub o from v
 func (v Vec4) Sub(o Vec4) Vec4 {
 	return v.Add(o.Neg())
 }
 
-// Mul v*s and return result
+// Mul scales v by s
 func (v Vec4) Mul(s float64) (res Vec4) {
 	for i := range v.v {
 		res.v[i] = v.v[i] * s
@@ -73,7 +73,16 @@ func (v Vec4) Mul(s float64) (res Vec4) {
 	return
 }
 
-// Div v/s and return result
+// MulV multiplies v*s per dim
+func (v Vec4) MulV(o Vec4) (res Vec4) {
+	for i := range res.v {
+		res.v[i] = v.v[i] * o.v[i]
+	}
+	res.Cache(v.cache != nil)
+	return
+}
+
+// Div scales v by the multiplicative inverse of s
 func (v Vec4) Div(s float64) Vec4 {
 	return v.Mul(1.0 / s)
 }
@@ -83,12 +92,33 @@ func (v Vec4) Neg() Vec4 {
 	return v.Mul(-1.0)
 }
 
+// Inv returns the multiplicative inverse of v
+func (v Vec4) Inv() (res Vec4) {
+	for i := range v.v {
+		res.v[i] = 1.0 / v.v[i]
+	}
+	return
+}
+
 // Dot returns the dot product of v and o (v⋅o)
 func (v Vec4) Dot(o Vec4) (d float64) {
 	for i := range v.v {
 		d += v.v[i] * o.v[i]
 	}
 	return
+}
+
+// Within returns true if v is within the bounds of o
+// considering both values as their absolute.
+func (v Vec4) Within(o Vec4) bool {
+	va := v.Abs()
+	oa := o.Abs()
+	for i := range va.v {
+		if va.v[i] > oa.v[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // Eq returns true if v and o are equal

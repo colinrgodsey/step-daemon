@@ -12,14 +12,18 @@ import (
 )
 
 const (
-	maxResizes  = 100
-	resizeScale = 0.8
+	maxLimitResize  = 30
+	maxSCurveResize = 15  //10
+	maxNormResize   = 100 //30
+	resizeScale     = 0.8
+
+	failedSCurve = "warn:failed to apply s-curve easing"
 )
 
 type physicsHandler struct {
 	head, tail io.Conn
 
-	sJerk, acc vec.Vec4
+	sJerk, acc, maxV vec.Vec4
 
 	lastMove, curMove physics.Move
 }
@@ -42,8 +46,7 @@ func (h *physicsHandler) headRead(msg io.Any) {
 			h.acc = msg.Args.GetVec4(h.acc)
 		}
 	case config.Config:
-		h.sJerk = msg.SJerk
-		h.acc = msg.Acceleration
+		h.procConfig(msg)
 	}
 	h.tail.Write(msg)
 }
@@ -95,10 +98,9 @@ func (h *physicsHandler) createBlock(pre, move, post physics.Move, useSTrap bool
 		return physics.STrapBlock(
 			frStart, frStartJerk, frAccel, frJerk, move,
 			frDeccel, frEndJerk, frEnd)
-	} else {
-		return physics.TrapBlock(
-			frStart, frAccel, move, frDeccel, frEnd)
 	}
+	return physics.TrapBlock(
+		frStart, frAccel, move, frDeccel, frEnd)
 }
 
 /*
@@ -112,13 +114,13 @@ here will slow down the next move.
 
 Slowing the target fr *does not* effect either juction fr.
 */
-func (h *physicsHandler) procMoveSafe(next physics.Move, useSTrap bool) bool {
+func (h *physicsHandler) procMoveSafe(next physics.Move, maxResizes int, useSTrap bool) (physics.Move, bool) {
 	defer func() {
 		h.pushMove(next)
 	}()
 
 	if !h.curMove.IsValid() {
-		return true // move is empty, no motion block needed
+		return next, true // move is empty, no motion block needed
 	}
 
 	for i := 0; i < maxResizes; i++ {
@@ -126,27 +128,33 @@ func (h *physicsHandler) procMoveSafe(next physics.Move, useSTrap bool) bool {
 
 		//TODO: better resize logic
 		switch err {
-		case physics.ErrEaseLimitPre:
-			h.curMove = h.curMove.Scale(resizeScale / float64(i+1))
-		case physics.ErrEaseLimitPost:
-			next = next.Scale(resizeScale / float64(i+1))
 		case nil:
 			h.tail.Write(block)
-			return true
+			return next, true
+		case physics.ErrEaseLimitPre:
+			h.curMove = h.curMove.Scale(resizeScale)
+		case physics.ErrEaseLimitPost:
+			next = next.Scale(resizeScale)
 		}
 	}
-	return false
+	return next, false
 }
 
+/* TODO: we need to look at the number of ticks a move will make, and figure out what shape to use!!
+low number of steps can be pulses.
+Could overlap of 'invalid' start/end dt be used as a factor?
+*/
 func (h *physicsHandler) procMove(next physics.Move) {
-	if h.procMoveSafe(next, true) {
+	var ok bool
+	next = limitResize(next, h.maxV)
+	if next, ok = h.procMoveSafe(next, maxSCurveResize, true); ok {
 		return
 	}
-	h.head.Write("warn:failed to apply s-curve easing")
-	if h.procMoveSafe(next, false) {
+	h.head.Write(failedSCurve)
+	if next, ok = h.procMoveSafe(next, maxNormResize, false); ok {
 		return
 	}
-	panic(fmt.Sprintf("Failed to ease FR for block. Pre: %v, Move: %v, Post: %v", &h.lastMove, &h.curMove, &next))
+	panic(fmt.Sprintf("failed to ease FR for block. Pre: %v, Move: %v, Post: %v", &h.lastMove, &h.curMove, &next))
 }
 
 func (h *physicsHandler) pushMove(next physics.Move) {
@@ -158,6 +166,32 @@ func (h *physicsHandler) endBlock() {
 	h.procMove(physics.Move{})
 	h.procMove(physics.Move{})
 	h.procMove(physics.Move{})
+}
+
+func (h *physicsHandler) procConfig(conf config.Config) {
+	format := config.GetPageFormat(conf.Format)
+	fac := float64(conf.TicksPerSecond) *
+		float64(format.MaxSegmentSteps) / float64(format.SegmentSteps)
+
+	h.maxV = conf.StepsPerMM.Inv().Mul(fac)
+	h.sJerk = conf.SJerk
+	h.acc = conf.Acceleration
+
+	h.head.Write("info:max vel (step limit) is " + h.maxV.String())
+}
+
+//TODO: this can be done with an O(1) linear resize...
+func limitResize(m physics.Move, max vec.Vec4) physics.Move {
+	if !m.IsValid() {
+		return m
+	}
+	for i := 0; i < maxLimitResize; i++ {
+		if m.Vel().Within(max) {
+			return m
+		}
+		m = m.Scale(resizeScale)
+	}
+	panic(fmt.Sprintf("move (%v) cannot fit within max velocity (%v)", m, max))
 }
 
 func PhysicsHandler(head, tail io.Conn) {

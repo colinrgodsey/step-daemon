@@ -34,5 +34,7 @@ func LoadConfig(path string) (conf Config, err error) {
 		return
 	}
 	err = json.Unmarshal(bytes, &conf)
+	// throw panic if format is bad
+	GetPageFormat(conf.Format)
 	return
 }

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	gio "io"
+	"net"
 	"os"
 	"os/signal"
 	"runtime/trace"
@@ -19,7 +21,10 @@ import (
 	"github.com/pkg/profile"
 )
 
-const readBufferSize = 24
+const (
+	readBufferSize    = 24
+	normalPlannerSize = 8
+)
 
 type argMap map[string]string
 
@@ -38,7 +43,7 @@ func handler(head io.Conn, size int, h func(head, tail io.Conn)) (tail io.Conn) 
 }
 
 func stepdPipeline(c io.Conn) io.Conn {
-	c = handler(c, 1, pipeline.SourceHandler)
+	c = handler(c, normalPlannerSize, pipeline.SourceHandler)
 	c = handler(c, 1, pipeline.DeltaHandler)
 	c = handler(c, 1, pipeline.PhysicsHandler)
 	c = handler(c, pipeline.NumPages, pipeline.StepHandler)
@@ -61,12 +66,8 @@ func bailArgs() {
 	os.Exit(1)
 }
 
-func main0() {
+func main() {
 	args := loadArgs()
-
-	if !args.has("config") || !args.has("device") || !args.has("baud") {
-		bailArgs()
-	}
 
 	conf, err := config.LoadConfig(args["config"])
 	if err != nil {
@@ -93,7 +94,7 @@ func main0() {
 	c.Write(conf)
 	go io.LinePipe(os.Stdin, os.Stdout, c.Flip())
 	c = stepdPipeline(c)
-	tailSink(c, args)
+	tailSink(c, args, conf)
 }
 
 func closeOnExit(closer func()) {
@@ -119,31 +120,41 @@ func loadArgs() argMap {
 }
 
 //TODO: need the auto restart loop here
-func tailSink(c io.Conn, args argMap) {
+func tailSink(c io.Conn, args argMap, conf config.Config) {
 	var tail gio.ReadWriteCloser
 	var err error
 
-	baud, err := strconv.Atoi(args["baud"])
-	if err != nil {
-		fmt.Println("Failed to parse baud")
+	if args.has("device") && args.has("baud") {
+		baud, err := strconv.Atoi(args["baud"])
+		if err != nil {
+			fmt.Println("Failed to parse baud")
+			bailArgs()
+		}
+
+		cfg := &serial.Config{Name: args["device"], Baud: baud}
+		tail, err = serial.OpenPort(cfg)
+		closeOnExit(func() {
+			fmt.Println("info:closing device serial")
+			tail.Close()
+			time.Sleep(3000)
+		})
+	} else if args.has("addr") {
+		tail, err = net.Dial("tcp", args["addr"])
+		if err != nil {
+			fmt.Println("Failed to connect to " + args["addr"])
+			fmt.Println(err)
+			bailArgs()
+		}
+		bytes, _ := json.Marshal(conf)
+		tail.Write(bytes)
+		tail.Write([]byte("\n"))
+	} else {
 		bailArgs()
 	}
-
-	cfg := &serial.Config{Name: args["device"], Baud: baud}
-	tail, err = serial.OpenPort(cfg)
-	closeOnExit(func() {
-		fmt.Println("info:closing device serial")
-		tail.Close()
-		time.Sleep(3000)
-	})
 
 	if err != nil {
 		panic(fmt.Sprintf("Failed to open dest file %v: %v", os.Args[1], err))
 	}
 
 	io.LinePipe(tail, tail, c)
-}
-
-func main() {
-	main0()
 }

@@ -35,7 +35,7 @@ func (m *Move) Fr() float64 {
 }
 
 func (m *Move) IsValid() bool {
-	return m.delta.Dist() > 0
+	return m.fr > 0 && m.delta.Dist() > 0
 }
 
 func (m *Move) Delta() vec.Vec4 {

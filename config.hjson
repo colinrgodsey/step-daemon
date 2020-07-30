@@ -23,9 +23,9 @@
     ticks-per-second: 61440
 
     # Direct Stepping page format used (must match the firmware configuration).
-    format: "SP_4x2_256"
+    #format: "SP_4x2_256"
+    format: "SP_4x4D_128"
 
     # Used for bed leveling.
-    bed-max-x: 200
-    bed-max-y: 200
+    bed-max: [200, 200]
 }

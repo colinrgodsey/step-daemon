@@ -80,7 +80,7 @@ func (h *deviceHandler) tailRead(msg io.Any) {
 				h.head.Write("warn:pending OK count dropped below 0")
 				h.pendingCommands = 0
 			}
-			h.head.Write("info:" + msg)
+			//h.head.Write("info:" + msg)
 		} else {
 			h.head.Write(msg)
 		}
@@ -120,6 +120,7 @@ func (h *deviceHandler) sendGCode(g gcode.GCode) {
 }
 
 func (h *deviceHandler) updatePageStates(msg []byte) {
+	//TODO: checksum validation
 	for i, s0 := range h.states {
 		byteIdx := i / 4
 		bitIdx := uint((i * 2) % 8)
@@ -180,6 +181,8 @@ func (h *deviceHandler) sendPage(idx int) {
 	msg = append(msg, byte(idx), byte(sz))
 	msg = append(msg, data...)
 	msg = append(msg, chs)
+
+	//h.head.Write(fmt.Sprintf("debug:sending page of size %v\n", sz))
 
 	h.states[idx] = pWriting
 	h.tail.Write(msg)
