@@ -1,0 +1,70 @@
+<h2><a href="https://github.com/colinrgodsey/step-daemon" target="_blank">{{ _('Step Daemon') }}</a></h2>
+
+<p>
+    OctoPrint will connect to Step Daemon automatically once the service is running.
+    As long as the Step Daemon plugin is enabled in OctoPrint, you will be unable to
+    directly connect to your printer. If the connection fails, make sure your target
+    device is configured correctly in the stepd config, or check the logs for any
+    further info.
+</p>
+
+<div data-bind="visible: updating">
+    <h3>{{ _('Status: Updating...') }}</h3>
+
+    <p>
+        The plugin will automatically check for updates to Step Daemon and rebuild the daemon
+        from source if needed every time OctoPrint is started. This will take especially long
+        the first time (up to 10 minutes), and should be quicker for future updates. Updates are
+        only run when new changes are detected on
+        the <a href="https://github.com/colinrgodsey/step-daemon" target="_blank">Step Daemon GitHub</a>
+        or for initial first-run builds. After the updates are done, OctoPrint will automatically connect.
+    </p>
+
+    <p>
+        The Step Daemon tab here will update once the update is complete.
+    </p>
+</div>
+
+<div data-bind="visible: running">
+    <h3>{{ _('Status: Ready') }}</h3>
+
+    <p>
+        Step Daemon is running and OctoPrint should automatically connect. If it fails to connect,
+        try to use the AUTO connect manually from the OctoPrint UI. If it fails to connect past that,
+        check the OctoPrint logs to see if there are any critical errors from Step Daemon itself.
+    </p>
+</div>
+
+<div data-bind="visible: failed">
+    <h3>{{ _('Status: Failed!') }}</h3>
+
+    <p>
+        Something has gone horribly wrong. Check the OctoPrint logs for any startup errors from Step Daemon.
+        If needed, consider uninstalling the plugin (chose the "clean up data" option) and reinstall it.
+        This will force a new build to be created and reset the Step Daemon configuration.
+    </p>
+</div>
+
+<div>
+    <h3>{{ _('Config and Requirements') }}</h3>
+
+    <p>
+        Make sure you configure Step Daemon in the OctoPrint plugin settings. Baudrate and the device
+        port must be specified. The other settings are recommended at their default. Step Daemon
+        will pull other planner configs (such as acceleration, steps/mm, etc) from the device itself.
+    </p>
+
+    <p>
+        Make sure your Marlin devices is configured correctly following the requirements in the
+        <a href="https://github.com/colinrgodsey/step-daemon/blob/master/README.md">Step Daemon readme</a>
+        on the GitHub page.
+    </p>
+
+    <p>
+        It is recommended to have OpenJDK 11 installed as the default java VM:
+        <code>sudo apt install openjdk-11-jdk-headless</code>.
+        Debian/Raspbian devices currently also require the <code>socat</code> package to be installed:
+        <code>sudo apt install socat</code>.
+    </p>
+</div>
+
