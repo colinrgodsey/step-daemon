@@ -4,7 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+
+	"github.com/colinrgodsey/cartesius/f64"
 )
+
+/*
+TODO: when switching to new cartesius library, define vec4 as:
+
+type Vec4 struct {
+	cartesius.f64.Vec2
+}
+*/
 
 type vec4Cache struct {
 	norm, abs Vec4
@@ -14,7 +24,7 @@ type vec4Cache struct {
 
 // Vec4 is a 4-dimentional float64 vector
 type Vec4 struct {
-	v     [4]float64
+	v     f64.Vec4
 	cache *vec4Cache
 }
 
@@ -52,9 +62,7 @@ func (v Vec4) getSetBit(bit int) bool {
 
 // Add o to v
 func (v Vec4) Add(o Vec4) (res Vec4) {
-	for i := range v.v {
-		res.v[i] = v.v[i] + o.v[i]
-	}
+	res.v = v.v.Add(o.v)
 	res.Cache(v.cache != nil)
 	return
 }
@@ -66,18 +74,14 @@ func (v Vec4) Sub(o Vec4) Vec4 {
 
 // Mul scales v by s
 func (v Vec4) Mul(s float64) (res Vec4) {
-	for i := range v.v {
-		res.v[i] = v.v[i] * s
-	}
+	res.v = v.v.Mul(s)
 	res.Cache(v.cache != nil)
 	return
 }
 
 // MulV multiplies v*s per dim
 func (v Vec4) MulV(o Vec4) (res Vec4) {
-	for i := range res.v {
-		res.v[i] = v.v[i] * o.v[i]
-	}
+	res.v = v.v.MulV(o.v)
 	res.Cache(v.cache != nil)
 	return
 }
@@ -94,31 +98,19 @@ func (v Vec4) Neg() Vec4 {
 
 // Inv returns the multiplicative inverse of v
 func (v Vec4) Inv() (res Vec4) {
-	for i := range v.v {
-		res.v[i] = 1.0 / v.v[i]
-	}
+	res.v = v.v.Inv()
 	return
 }
 
 // Dot returns the dot product of v and o (v⋅o)
-func (v Vec4) Dot(o Vec4) (d float64) {
-	for i := range v.v {
-		d += v.v[i] * o.v[i]
-	}
-	return
+func (v Vec4) Dot(o Vec4) float64 {
+	return v.v.Dot(o.v)
 }
 
 // Within returns true if v is within the bounds of o
 // considering both values as their absolute.
 func (v Vec4) Within(o Vec4) bool {
-	va := v.Abs()
-	oa := o.Abs()
-	for i := range va.v {
-		if va.v[i] > oa.v[i] {
-			return false
-		}
-	}
-	return true
+	return v.v.Within(o.v)
 }
 
 // Eq returns true if v and o are equal
@@ -186,9 +178,9 @@ func (v Vec4) String() string {
 // Dist returns the L2 norm of v
 func (v Vec4) Dist() float64 {
 	if v.cache == nil {
-		return math.Sqrt(v.Dot(v))
+		return v.v.Mag()
 	} else if v.cache.dist == -1 {
-		v.cache.dist = math.Sqrt(v.Dot(v))
+		v.cache.dist = v.v.Mag()
 	}
 	return v.cache.dist
 }

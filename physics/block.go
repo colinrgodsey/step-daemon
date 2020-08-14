@@ -47,6 +47,10 @@ func (b trapBlock) getMove() Move {
 	return b.move
 }
 
+/*
+TODO: Processing the shapes here should generate and use some kind of table
+of cached values.
+*/
 func STrapBlock(
 	frStart, frStartJerk, frAccel float64,
 	frJerk float64, move Move,
