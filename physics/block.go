@@ -17,8 +17,8 @@ var (
 )
 
 type MotionBlock interface {
-	getShape() Shape
-	getMove() Move
+	GetShape() Shape
+	GetMove() Move
 }
 
 type sTrapBlock struct {
@@ -31,19 +31,19 @@ type trapBlock struct {
 	move  Move
 }
 
-func (b sTrapBlock) getShape() Shape {
+func (b sTrapBlock) GetShape() Shape {
 	return b.shape
 }
 
-func (b sTrapBlock) getMove() Move {
+func (b sTrapBlock) GetMove() Move {
 	return b.move
 }
 
-func (b trapBlock) getShape() Shape {
+func (b trapBlock) GetShape() Shape {
 	return b.shape
 }
 
-func (b trapBlock) getMove() Move {
+func (b trapBlock) GetMove() Move {
 	return b.move
 }
 
@@ -74,7 +74,6 @@ func STrapBlock(
 		frStart)
 
 	if !shape.IsValid() {
-		//if pre.Dt() > post.Dt() || post.Dt() < Eps {
 		if move.Fr() > frEnd {
 			return nil, ErrEaseLimitPre
 		}
@@ -93,7 +92,6 @@ func TrapBlock(frStart, frAccel float64, move Move, frDeccel, frEnd float64) (Mo
 		frStart)
 
 	if !shape.IsValid() {
-		//if pre.Dt() > post.Dt() || post.Dt() < Eps {
 		if move.Fr() > frEnd {
 			return nil, ErrEaseLimitPre
 		}
@@ -106,8 +104,8 @@ func TrapBlock(frStart, frAccel float64, move Move, frDeccel, frEnd float64) (Mo
 // BlockIterator creates an position iterator channel for the desired sample
 // granularity, over the defined motion block.
 func BlockIterator(block MotionBlock, samplesPerSecond, eAdvanceK float64) <-chan vec.Vec4 {
-	clamp := func(min, x, max float64) float64 {
-		if x < min {
+	clamp := func(x, max float64) float64 {
+		if x < 0 {
 			return 0
 		} else if x > max {
 			return max
@@ -117,8 +115,8 @@ func BlockIterator(block MotionBlock, samplesPerSecond, eAdvanceK float64) <-cha
 
 	c := make(chan vec.Vec4, iteratorChanCap)
 	go func() {
-		shape := block.getShape()
-		move := block.getMove()
+		shape := block.GetShape()
+		move := block.GetMove()
 		isPrint := move.IsPrintMove()
 
 		samples := shape.Dt() * samplesPerSecond
@@ -126,16 +124,14 @@ func BlockIterator(block MotionBlock, samplesPerSecond, eAdvanceK float64) <-cha
 
 		for i := 0.0; i < samples; i++ {
 			dt := i * div
-			d := clamp(0.0, shape.Int1At(dt, 0), move.Delta().Dist())
+			d := clamp(shape.Int1At(dt, 0), move.Delta().Dist())
 			pos := move.From().Add(move.Delta().Norm().Mul(d))
 
-			var eOffs vec.Vec4
 			if isPrint {
 				eFac := shape.Apply(dt) * move.Delta().Norm().E() * eAdvanceK
-				eOffs = vec.NewVec4(0, 0, 0, eFac)
+				pos = pos.Add(vec.NewVec4(0, 0, 0, eFac))
 			}
-
-			c <- pos.Add(eOffs)
+			c <- pos
 		}
 		close(c)
 	}()

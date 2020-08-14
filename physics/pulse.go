@@ -1,12 +1,19 @@
 package physics
 
+import "fmt"
+
 type pulse struct {
-	dy, dt float64
+	area, dy, dt float64
+}
+
+func (s pulse) Area() float64 {
+	return s.area
 }
 
 func (s pulse) Dt() float64 {
 	return s.dt
 }
+
 func (s pulse) IsValid() bool {
 	return s.dt >= 0
 }
@@ -31,11 +38,15 @@ func (s pulse) Int3At(dt, c0, c1, c2 float64) float64 {
 	return c0 + c1*dt + c2*dt*dt/2.0 + s.dy*dt*dt*dt/6.0
 }
 
+func (s pulse) String() string {
+	return fmt.Sprintf("Pulse(%v, %v)", s.dy, s.area)
+}
+
 func Pulse(dy, area float64) Shape {
 	dt := 0.0
 	if dy != 0.0 {
 		dt = area / dy
 	}
 
-	return pulse{dt: dt, dy: dy}
+	return pulse{area, dy, dt}
 }

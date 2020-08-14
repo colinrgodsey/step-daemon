@@ -34,7 +34,7 @@ func (m *Move) Fr() float64 {
 	return m.fr
 }
 
-func (m *Move) IsValid() bool {
+func (m *Move) NonEmpty() bool {
 	return m.fr > 0 && m.delta.Dist() > 0
 }
 

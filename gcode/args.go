@@ -11,6 +11,11 @@ import (
 // Args provides methods for reading tagged args
 type Args []string
 
+// Arg creates a single floating point argument.
+func Arg(f rune, v float64) string {
+	return string(f) + strconv.FormatFloat(v, 'f', -1, 32)
+}
+
 // GetString for an arg label
 func (a Args) GetString(f rune) (x string, ok bool) {
 	ss := string(f) + "%s"

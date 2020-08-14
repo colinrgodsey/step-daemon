@@ -75,7 +75,7 @@ func (h *physicsHandler) createBlock(pre, move, post physics.Move, useSTrap bool
 	frStartJerk := calcJerk(dvStart)
 	frMaxStart := math.Min(pre.Fr(), move.Fr())
 	frStart := 0.0
-	if pre.IsValid() {
+	if pre.NonEmpty() {
 		f := pre.Delta().Norm().Dot(move.Delta().Norm())
 		frStart = frMaxStart * clamp(f)
 	}
@@ -87,7 +87,7 @@ func (h *physicsHandler) createBlock(pre, move, post physics.Move, useSTrap bool
 	frEndJerk := calcJerk(dvEnd)
 	frMaxEnd := math.Min(move.Fr(), post.Fr())
 	frEnd := 0.0
-	if post.IsValid() {
+	if post.NonEmpty() {
 		f := move.Delta().Norm().Dot(post.Delta().Norm())
 		frEnd = frMaxEnd * clamp(f)
 	}
@@ -112,32 +112,34 @@ The "next" move here can also be modified.
 A "pre" fault here will slow down the current move, a "post" fault
 here will slow down the next move.
 
-Slowing the target fr *does not* effect either juction fr.
+Slowing the target fr *does not* affect either juction fr.
 */
-func (h *physicsHandler) procMoveSafe(next physics.Move, maxResizes int, useSTrap bool) (physics.Move, bool) {
-	defer func() {
-		h.pushMove(next)
-	}()
-
-	if !h.curMove.IsValid() {
-		return next, true // move is empty, no motion block needed
+func (h *physicsHandler) procMoveSafe(next physics.Move, maxResizes int, useSTrap bool) bool {
+	curMove := h.curMove
+	if !h.curMove.NonEmpty() {
+		goto success // move is empty, no motion block needed
 	}
 
 	for i := 0; i < maxResizes; i++ {
-		block, err := h.createBlock(h.lastMove, h.curMove, next, useSTrap)
+		block, err := h.createBlock(h.lastMove, curMove, next, useSTrap)
 
 		//TODO: better resize logic
 		switch err {
 		case nil:
 			h.tail.Write(block)
-			return next, true
+			goto success
 		case physics.ErrEaseLimitPre:
-			h.curMove = h.curMove.Scale(resizeScale)
+			curMove = curMove.Scale(resizeScale)
 		case physics.ErrEaseLimitPost:
 			next = next.Scale(resizeScale)
 		}
 	}
-	return next, false
+	return false
+
+success:
+	h.curMove = curMove
+	h.pushMove(next)
+	return true
 }
 
 /* TODO: we need to look at the number of ticks a move will make, and figure out what shape to use!!
@@ -145,13 +147,13 @@ low number of steps can be pulses.
 Could overlap of 'invalid' start/end dt be used as a factor?
 */
 func (h *physicsHandler) procMove(next physics.Move) {
-	var ok bool
-	next = limitResize(next, h.maxV)
-	if next, ok = h.procMoveSafe(next, maxSCurveResize, true); ok {
+	next = h.limitResize(next, h.maxV)
+
+	if h.procMoveSafe(next, maxSCurveResize, true) {
 		return
 	}
 	h.head.Write(failedSCurve)
-	if next, ok = h.procMoveSafe(next, maxNormResize, false); ok {
+	if h.procMoveSafe(next, maxNormResize, false) {
 		return
 	}
 	panic(fmt.Sprintf("failed to ease FR for block. Pre: %v, Move: %v, Post: %v", &h.lastMove, &h.curMove, &next))
@@ -171,7 +173,7 @@ func (h *physicsHandler) endBlock() {
 func (h *physicsHandler) procConfig(conf config.Config) {
 	format := config.GetPageFormat(conf.Format)
 	fac := float64(conf.TicksPerSecond) *
-		float64(format.MaxSegmentSteps) / float64(format.SegmentSteps)
+		(float64(format.MaxSegmentSteps) - 0.01) / float64(format.SegmentSteps)
 
 	h.maxV = conf.StepsPerMM.Inv().Mul(fac)
 	h.sJerk = conf.SJerk
@@ -181,8 +183,8 @@ func (h *physicsHandler) procConfig(conf config.Config) {
 }
 
 //TODO: this can be done with an O(1) linear resize...
-func limitResize(m physics.Move, max vec.Vec4) physics.Move {
-	if !m.IsValid() {
+func (h *physicsHandler) limitResize(m physics.Move, max vec.Vec4) physics.Move {
+	if !m.NonEmpty() {
 		return m
 	}
 	for i := 0; i < maxLimitResize; i++ {
@@ -190,6 +192,7 @@ func limitResize(m physics.Move, max vec.Vec4) physics.Move {
 			return m
 		}
 		m = m.Scale(resizeScale)
+		//h.head.Write("debug:resizing move to " + m.String())
 	}
 	panic(fmt.Sprintf("move (%v) cannot fit within max velocity (%v)", m, max))
 }

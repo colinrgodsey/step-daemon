@@ -12,8 +12,6 @@ import (
 	"github.com/colinrgodsey/step-daemon/vec"
 )
 
-const segmentSplit = "warn:step segment split"
-
 type stepHandler struct {
 	head, tail io.Conn
 
@@ -33,8 +31,6 @@ type stepHandler struct {
 	currentChunk []byte
 	segmentIdx   int
 }
-
-//TODO: move max steps per segment check elsewhere? the middle-FR of the move can be used to test the peak steps possibly. meh, this might not work actually
 
 func (h *stepHandler) headRead(msg io.Any) {
 	switch msg := msg.(type) {
@@ -140,7 +136,7 @@ func (h *stepHandler) procSegmentBytesSP4x1512(ds [4]int) {
 	h.segmentIdx++
 }
 
-func (h *stepHandler) procSegment(ds [4]int) {
+func (h *stepHandler) procSegment(ds [4]int) bool {
 	ia := func(i int) int {
 		if i < 0 {
 			return -i
@@ -151,10 +147,11 @@ func (h *stepHandler) procSegment(ds [4]int) {
 	if !h.format.Directional {
 		h.checkDirection(ds)
 	}
-	for _, d := range ds {
+	for di, d := range ds {
 		if ia(d) > h.format.MaxSegmentSteps {
 			// splits should be very rare, but still happen
-			h.head.Write(segmentSplit)
+			msg := fmt.Sprintf("warn:step segment split for axis %v (%v v %v)", di, ia(d), h.format.MaxSegmentSteps)
+			h.head.Write(msg)
 			var ds0 [4]int
 			for i := range ds {
 				ds0[i] = ds[i] / 2
@@ -162,13 +159,14 @@ func (h *stepHandler) procSegment(ds [4]int) {
 			}
 			h.procSegment(ds0)
 			h.procSegment(ds)
-			return
+			return false
 		}
 	}
 	h.procSegmentBytes(ds)
 	if h.segmentIdx == h.format.Segments {
 		h.flushChunk()
 	}
+	return true
 }
 
 func (h *stepHandler) procBlock(block physics.MotionBlock) {
@@ -179,7 +177,6 @@ func (h *stepHandler) procBlock(block physics.MotionBlock) {
 		var ds [4]int
 
 		zOffs := 0.0 //TODO: leveling
-
 		for i := range stepDest {
 			offs := 0.0
 			scale := 1.0
@@ -191,14 +188,15 @@ func (h *stepHandler) procBlock(block physics.MotionBlock) {
 			}
 			x := (pos.GetAt(i) + offs) * h.stepsPerMM.GetAt(i) * scale
 			stepDest[i] = int64(math.Round(x))
-		}
-
-		for i := range stepDest {
 			ds[i] = int(stepDest[i] - h.pos[i])
 		}
-		h.procSegment(ds)
+		wasValid := h.procSegment(ds)
 		h.pos = stepDest
 		h.vPos = pos
+
+		if !wasValid {
+			h.head.Write(fmt.Sprintf("warn:segment split with block %v", block.GetShape()))
+		}
 	}
 }
 

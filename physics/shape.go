@@ -1,6 +1,7 @@
 package physics
 
 type Shape interface {
+	Area() float64
 	Dt() float64
 	IsValid() bool
 
@@ -14,7 +15,8 @@ type Shape interface {
 }
 
 func Int1(s Shape, c0 float64) float64 {
-	return s.Int1At(s.Dt(), c0)
+	//return s.Int1At(s.Dt(), c0)
+	return s.Area() + c0
 }
 
 func Int2(s Shape, c0, c1 float64) float64 {

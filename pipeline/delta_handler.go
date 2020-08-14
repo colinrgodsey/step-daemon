@@ -55,6 +55,9 @@ func (h *deltaHandler) headRead(msg io.Any) {
 				panic("timed out while syncing position")
 			}
 			h.syncC = nil
+			h.headRead(gcode.New('G', 92,
+				gcode.Arg('X', h.pos.X()), gcode.Arg('Y', h.pos.Y()),
+				gcode.Arg('Z', h.pos.Z()), gcode.Arg('E', h.pos.E())))
 			return
 		case msg.IsM(220): // set feedrate
 			if x, ok := msg.Args.GetFloat('S'); ok {

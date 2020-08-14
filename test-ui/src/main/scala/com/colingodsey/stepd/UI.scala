@@ -151,7 +151,7 @@ class MovementProcessor(conn: ActorRef) extends Actor with ActorLogging {
   import GCode._
   import com.colingodsey.stepd.Math._
 
-  var ticks = 70000 / 4 * 20.0 //180.0 * ticksPerSecond / format.StepsPerSegment
+  var ticks = 70000 / 4 * 80.0 //180.0 * ticksPerSecond / format.StepsPerSegment
   var idx = 0
 
   var curChunkIdx = -1
