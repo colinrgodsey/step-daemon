@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/colinrgodsey/step-daemon.svg?branch=master)](https://travis-ci.com/colinrgodsey/step-daemon)
+[![Build Status](https://travis-ci.com/colinrgodsey/step-daemon.svg?branch=rewrite)](https://travis-ci.com/colinrgodsey/step-daemon)
 
 # Step Daemon #
 
