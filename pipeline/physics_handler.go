@@ -13,8 +13,8 @@ import (
 
 const (
 	maxLimitResize  = 30
-	maxSCurveResize = 15  //10
-	maxNormResize   = 100 //30
+	maxSCurveResize = 35 //15
+	maxNormResize   = 100
 	resizeScale     = 0.8
 
 	failedSCurve = "warn:failed to apply s-curve easing"

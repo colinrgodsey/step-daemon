@@ -2,50 +2,6 @@ package io
 
 type Any interface{}
 
-/*
-type HeadHandler func(head, tail Conn) (headRead func(msg Any))
-
-func ConnHandler(head Conn, chanSize int, handler DuplexHandler) (tail Conn, closer gio.Closer) {
-	head = head.Flip()
-	tail = NewConn(chanSize, chanSize)
-	readHead := true
-
-	closerC := make(chan struct{})
-	closer = ConnHandlerCloser(closerC)
-
-	headRead, tailRead := handler(head, tail, &readHead)
-	if headRead == nil {
-		headRead = func(msg Any) { tail.Wc() <- msg }
-	}
-	if tailRead == nil {
-		tailRead = func(msg Any) { head.Wc() <- msg }
-	}
-
-	go func() {
-		for {
-			if readHead {
-				select {
-				case <-closerC:
-					return
-				case msg := <-head.Rc():
-					headRead(msg)
-				case msg := <-tail.Rc():
-					tailRead(msg)
-				}
-			} else {
-				select {
-				case <-closerC:
-					return
-				case msg := <-tail.Rc():
-					tailRead(msg)
-				}
-			}
-		}
-	}()
-
-	return
-}*/
-
 // Conn is a generic bidirectional IO stream. Can be flipped to use
 // a tail Conn as the head Conn for the next handler or vice versa.
 type Conn struct {
@@ -79,15 +35,4 @@ func NewConn(rSize, wSize int) Conn {
 		rd: make(chan Any, rSize),
 		wr: make(chan Any, wSize),
 	}
-}
-
-type ConnHandlerCloser chan struct{}
-
-func (c ConnHandlerCloser) Close() error {
-	select {
-	case <-c:
-	default:
-		close(c)
-	}
-	return nil
 }
