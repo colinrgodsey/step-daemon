@@ -24,7 +24,7 @@ in hot spots where precision can be leveraged safely.
 
 ## Dependencies ##
 
-* **Go** must be installed from a system package or manually.
+* **[Go](https://golang.org/)** must be installed from a system package or manually.
 
 ## Marlin Configuration ##
 * Update with [current compatible branch](https://github.com/colinrgodsey/Marlin/tree/direct_stepping).
