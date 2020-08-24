@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	blEndString = "Bilinear Leveling Grid:"
+	blEndString   = "Bilinear Leveling Grid:"
+	blStartString = "G29 Auto Bed Leveling"
 )
 
 type blHandler struct {
@@ -48,21 +49,23 @@ func (h *blHandler) tailRead(msg io.Any) {
 		if p, ok := bed.ParsePoint(msg); ok {
 			h.samples = append(h.samples, p)
 		} else if strings.Index(msg, blEndString) == 0 && len(h.samples) > 0 {
-			h.procSamples()
 			h.saveSamples()
+			h.procSamples()
+		} else if strings.Index(msg, blStartString) == 0 {
+			h.head.Write("info:collection bed-level samples")
+			h.samples = nil
 		}
 	}
 	h.head.Write(msg)
 }
 
 func (h *blHandler) procSamples() {
-	h.head.Write("info:Generating bed level function...")
+	h.head.Write("info:generating bed level function...")
 	gen, err := bed.Generate(h.samples, h.bedMax)
 	if err != nil {
 		panic(fmt.Sprint("bad bedlevel data", err))
 	}
 	h.zFunc = gen
-	//h.head.Write("info:... done.")
 	h.tail.Write(gen)
 }
 

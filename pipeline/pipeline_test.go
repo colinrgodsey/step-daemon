@@ -35,6 +35,7 @@ func TestBedLevelHandler(t *testing.T) {
 	go func() {
 		head.Write(conf)
 		head.Write(gcode.New('G', 29))
+		tail.Write(blStartString)
 
 		for _, s := range samples {
 			msg := fmt.Sprintf("Bed X: %v Y: %v Z: %v ", s.X, s.Y, s.Offs)
@@ -54,6 +55,8 @@ collect:
 			if f, ok := msg.(bed.ZFunc); ok {
 				zFun = f
 				break collect
+			} else if s, ok := msg.(string); ok {
+				fmt.Println(s)
 			}
 		case <-head.Rc():
 		}
