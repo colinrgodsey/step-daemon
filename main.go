@@ -44,6 +44,7 @@ func handler(head io.Conn, size int, h func(head, tail io.Conn)) (tail io.Conn) 
 
 func stepdPipeline(c io.Conn) io.Conn {
 	c = handler(c, normalPlannerSize, pipeline.SourceHandler)
+	c = handler(c, 1, pipeline.BedLevelHandler)
 	c = handler(c, 1, pipeline.DeltaHandler)
 	c = handler(c, 1, pipeline.PhysicsHandler)
 	c = handler(c, pipeline.NumPages, pipeline.StepHandler)

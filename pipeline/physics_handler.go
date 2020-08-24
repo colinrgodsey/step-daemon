@@ -172,8 +172,7 @@ func (h *physicsHandler) endBlock() {
 
 func (h *physicsHandler) procConfig(conf config.Config) {
 	format := config.GetPageFormat(conf.Format)
-	fac := float64(conf.TicksPerSecond) *
-		(float64(format.MaxSegmentSteps) - 0.01) / float64(format.SegmentSteps)
+	fac := float64(conf.TicksPerSecond) * float64(format.SegmentSteps)
 
 	h.maxV = conf.StepsPerMM.Inv().Mul(fac)
 	h.sJerk = conf.SJerk

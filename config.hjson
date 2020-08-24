@@ -12,7 +12,10 @@
 
     # Definitive ceiling for 'real' per-axis jerk used with s-curve velocity.
     # These values are used to determine the acceleration curves and are given in mm/s3.
-    s-jerk: [1e8, 1e7, 1e6, 1e10]
+    s-jerk: [1e5, 1e4, 1e6, 1e8]
+
+    # Path to saved bed leveling samples.
+    bed-samples-path: "./bedlevel.json"
 
     ###
     ### The below settings are ideal for a 16MHz 8-bit AVR device with an RPi B+.
@@ -23,8 +26,7 @@
     ticks-per-second: 61440
 
     # Direct Stepping page format used (must match the firmware configuration).
-    #format: "SP_4x2_256"
-    format: "SP_4x4D_128"
+    format: "SP_4x2_256"
 
     # Used for bed leveling.
     bed-max: [200, 200]

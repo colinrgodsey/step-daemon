@@ -3,8 +3,6 @@ package bed
 import (
 	"strconv"
 	"strings"
-
-	"github.com/colinrgodsey/cartesius/f64"
 )
 
 const (
@@ -14,7 +12,7 @@ const (
 /* Bed X: 179.000 Y: 20.000 Z: 0.135 */
 
 // ParsePoint attemps to parse a bedlevel point from the device.
-func ParsePoint(line string) (res f64.Vec3, ok bool) {
+func ParsePoint(line string) (res Sample, ok bool) {
 	if strings.Index(line, pointIdent) != 0 {
 		return
 	}
@@ -33,6 +31,6 @@ func ParsePoint(line string) (res f64.Vec3, ok bool) {
 		vs = append(vs, v)
 	}
 	ok = true
-	res = f64.NewVec3(vs...)
+	res = Sample{X: vs[0], Y: vs[1], Offs: vs[2]}
 	return
 }

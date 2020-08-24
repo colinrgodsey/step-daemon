@@ -31,11 +31,9 @@ func (h *deltaHandler) headRead(msg io.Any) {
 			h.procGMove(msg)
 			return
 		case msg.IsG(28): // home
-			//forward home command, then get pos
-			defer h.headRead(gcode.New('G', 114))
+			defer h.headRead(gcode.New('G', 114)) // get pos after
 		case msg.IsG(29): // z probe
-			//TODO: send verbose version
-			defer h.headRead(gcode.New('G', 114))
+			defer h.headRead(gcode.New('G', 28)) // home after
 		case msg.IsG(90): // set absolute
 			h.info("setting to absolute coords")
 			h.abs = true
@@ -45,20 +43,8 @@ func (h *deltaHandler) headRead(msg io.Any) {
 		case msg.IsG(92): // set pos
 			h.pos = msg.Args.GetVec4(h.pos)
 		case msg.IsM(114): // get pos
-			h.info("syncing with device position")
 			h.syncC = make(chan vec.Vec4)
-			h.tail.Write(msg)
-			select {
-			case pos := <-h.syncC:
-				h.pos = pos
-			case <-time.After(syncTimeout * time.Second):
-				panic("timed out while syncing position")
-			}
-			h.syncC = nil
-			h.headRead(gcode.New('G', 92,
-				gcode.Arg('X', h.pos.X()), gcode.Arg('Y', h.pos.Y()),
-				gcode.Arg('Z', h.pos.Z()), gcode.Arg('E', h.pos.E())))
-			return
+			defer h.getPos()
 		case msg.IsM(220): // set feedrate
 			if x, ok := msg.Args.GetFloat('S'); ok {
 				h.frScale = x / 100.0
@@ -99,6 +85,19 @@ func (h *deltaHandler) tailRead(msg io.Any) {
 		}
 	}
 	h.head.Write(msg)
+}
+
+//TODO: i hate this, replace this later
+func (h *deltaHandler) getPos() {
+	h.info("syncing with device position")
+	select {
+	case pos := <-h.syncC:
+		h.pos = pos
+	case <-time.After(syncTimeout * time.Second):
+		panic("timed out while syncing position")
+	}
+	h.syncC = nil
+	h.headRead(gcode.New('G', 92, gcode.ArgV(h.pos)...))
 }
 
 func (h *deltaHandler) procGMove(g gcode.GCode) {

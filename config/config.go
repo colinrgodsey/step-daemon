@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/colinrgodsey/cartesius/f64"
 	"github.com/colinrgodsey/step-daemon/vec"
 	"github.com/hjson/hjson-go"
 )
@@ -16,6 +17,8 @@ type Config struct {
 	StepsPerMM     vec.Vec4 `json:"steps-per-mm"`
 	TicksPerSecond int      `json:"ticks-per-second"`
 	Format         string   `json:"format"`
+	BedMax         f64.Vec2 `json:"bed-max"`
+	BedSamplesPath string   `json:"bed-samples-path"`
 }
 
 func LoadConfig(path string) (conf Config, err error) {
@@ -34,7 +37,6 @@ func LoadConfig(path string) (conf Config, err error) {
 		return
 	}
 	err = json.Unmarshal(bytes, &conf)
-	// throw panic if format is bad
-	GetPageFormat(conf.Format)
+	GetPageFormat(conf.Format) // throw panic if format is bad
 	return
 }

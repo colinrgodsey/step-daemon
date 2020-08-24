@@ -16,6 +16,11 @@ func Arg(f rune, v float64) string {
 	return string(f) + strconv.FormatFloat(v, 'f', -1, 32)
 }
 
+func ArgV(v vec.Vec4) []string {
+	return []string{Arg('X', v.X()), Arg('Y', v.Y()),
+		Arg('Z', v.Z()), Arg('E', v.E())}
+}
+
 // GetString for an arg label
 func (a Args) GetString(f rune) (x string, ok bool) {
 	ss := string(f) + "%s"

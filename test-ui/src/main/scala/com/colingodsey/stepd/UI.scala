@@ -188,7 +188,7 @@ class MovementProcessor(conn: ActorRef) extends Actor with ActorLogging {
 
     format match {
       case PageFormat.SP_4x4D_128 =>
-        val blockIdx = (idx >> 3) << 1
+        val blockIdx = (idx / 7) << 1
 
         val a = curChunk(blockIdx) & 0xFF
         val b = curChunk(blockIdx + 1) & 0xFF
@@ -203,9 +203,9 @@ class MovementProcessor(conn: ActorRef) extends Actor with ActorLogging {
         z += zRaw - 7
         e += eRaw - 7
 
-        idx += 8
+        idx += 7
       case PageFormat.SP_4x2_256 =>
-        val byte = curChunk(idx >> 2) & 0xFF
+        val byte = curChunk(idx / 3) & 0xFF
 
         val xRaw = (byte >> 6) & 0x3
         val yRaw = (byte >> 4) & 0x3
@@ -217,7 +217,7 @@ class MovementProcessor(conn: ActorRef) extends Actor with ActorLogging {
         z += zRaw * getDirectionScale(2)
         e += eRaw * getDirectionScale(3)
 
-        idx += 4
+        idx += 3
       case PageFormat.SP_4x1_512 =>
         val byte = curChunk(idx >> 1) & 0xFF
         val isLow = (idx & 0x1) == 0

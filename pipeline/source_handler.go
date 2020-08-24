@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/colinrgodsey/step-daemon/gcode"
@@ -46,11 +47,14 @@ func SourceHandler(head, tail io.Conn) {
 	}
 
 	for msg := range tail.Rc() {
-		//TODO: device restart fun
 		if str := msg.(string); str == "pages_ready" && !started {
 			head.Write("info:device ready for paged data, starting...")
 			started = true
 			go readFunc()
+		} else if str := msg.(string); str == "echo:start" && started {
+			//TODO: redo this with an appropriate close pattern on the channels
+			fmt.Println("error:device restart detected")
+			os.Exit(1)
 		}
 		head.Write(msg)
 	}

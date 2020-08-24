@@ -130,6 +130,11 @@ func (v Vec4) Y() float64 {
 	return v.v[1]
 }
 
+// XY returns the X and Y value
+func (v Vec4) XY() [2]float64 {
+	return [2]float64{v.v[0], v.v[1]}
+}
+
 // Z value of v
 func (v Vec4) Z() float64 {
 	return v.v[2]
