@@ -181,7 +181,7 @@ func (h *stepHandler) zOffsAt(pos f64.Vec2) float64 {
 	}
 	z, err := h.zFunc(pos)
 	if err != nil {
-		h.head.Write(fmt.Sprint("error:bed level function failed for", pos))
+		h.head.Write(fmt.Sprint("warn:bed level function failed for", pos))
 	}
 	return z
 }
