@@ -16,6 +16,7 @@ class StepdPlugin(octoprint.plugin.SettingsPlugin,
                   octoprint.plugin.StartupPlugin):
 
   thread = None
+  success = False
 
   ##~~ SettingsPlugin mixin
 
@@ -44,8 +45,8 @@ class StepdPlugin(octoprint.plugin.SettingsPlugin,
   def on_api_get(self, request):
     return flask.jsonify(
       status=self.get_current_status(),
-      running=self.is_running(),
       updating=self.is_updating(),
+      success=self.success,
       settings=self._settings.get_all_data()
     )
 
@@ -99,7 +100,7 @@ class StepdPlugin(octoprint.plugin.SettingsPlugin,
   def serial_factory_hook(self, comm_instance, port, baudrate, read_timeout, *args, **kwargs):
     comm_instance._log("Connecting to Step Daemon")
 
-    if self.is_running():
+    if not self.success:
       msg = 'Step Daemon is still updating.'
       comm_instance._log(msg)
       raise Exception(msg)
@@ -115,18 +116,15 @@ class StepdPlugin(octoprint.plugin.SettingsPlugin,
   ##~~ Other stuff
 
   def update_stepd(self):
-    if self.is_running():
+    if self.is_updating():
       self.thread.close()
 
     self.thread = StepdThread(self.get_plugin_data_folder(), self._logger,
                               self._settings.get_all_data(), self.on_stepd_start)
     self.thread.start()
 
-  def is_running(self):
-    return self.thread and self.thread.running
-
   def is_updating(self):
-    return self.thread and self.thread.is_alive() and not self.thread.running
+    return self.thread and self.thread.is_alive()
 
   def get_current_status(self):
     if not self.thread:
@@ -139,7 +137,8 @@ class StepdPlugin(octoprint.plugin.SettingsPlugin,
       return "Server has crashed. Please restart OctoPrint."
 
   def on_stepd_start(self):
-    self._logger.info('Process ready, connecting now.')
+    self._logger.info('Update complete!')
+    self.success = True
     self._printer.connect()
 
 

@@ -87,6 +87,7 @@ class StepdThread(Thread):
         break
       else:
         self.logger.info("Build is already up to date.")
+        self.running_cb()
         return
 
     if self.go_build():
@@ -97,6 +98,7 @@ class StepdThread(Thread):
 
       st = os.stat(self.bin_path)
       os.chmod(self.bin_path, st.st_mode | stat.S_IEXEC)
+      self.running_cb()
     else:
       self.build_failed()
 
