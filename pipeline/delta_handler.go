@@ -31,7 +31,7 @@ func (h *deltaHandler) headRead(msg io.Any) {
 			h.procGMove(msg)
 			return
 		case msg.IsG(28): // home
-			defer h.headRead(gcode.New('G', 114)) // get pos after
+			defer h.headRead(gcode.New('M', 114)) // get pos after
 		case msg.IsG(29): // z probe
 			defer h.headRead(gcode.New('G', 28)) // home after
 		case msg.IsG(90): // set absolute
