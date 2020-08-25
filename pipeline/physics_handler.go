@@ -23,10 +23,11 @@ const (
 type physicsHandler struct {
 	head, tail io.Conn
 
-	sJerk, acc, spmm vec.Vec4
+	sJerk, acc vec.Vec4
+	spmm, maxV vec.Vec4
 
-	sps  float64
-	maxV vec.Vec4
+	sps   float64
+	maxSV vec.Vec4
 
 	lastMove, curMove physics.Move
 }
@@ -47,10 +48,12 @@ func (h *physicsHandler) headRead(msg io.Any) {
 		switch {
 		case msg.IsM(201): // set max accel
 			h.acc = msg.Args.GetVec4(h.acc)
+		case msg.IsM(203): // set max vel
+			h.maxV = msg.Args.GetVec4(h.maxV)
 		case msg.IsM(92): // set steps/mm
 			h.spmm = msg.Args.GetVec4(h.spmm)
-			h.maxV = h.spmm.Inv().Mul(h.sps)
-			h.head.Write("info:max vel (step limit) is " + h.maxV.String())
+			h.maxSV = h.spmm.Inv().Mul(h.sps)
+			h.head.Write("info:max vel (step limit) is " + h.maxSV.String())
 		}
 	case config.Config:
 		h.procConfig(msg)
@@ -154,7 +157,7 @@ low number of steps can be pulses.
 Could overlap of 'invalid' start/end dt be used as a factor?
 */
 func (h *physicsHandler) procMove(next physics.Move) {
-	next = h.limitResize(next, h.maxV)
+	next = h.limitResize(next)
 
 	if h.procMoveSafe(next, maxSCurveResize, true) {
 		return
@@ -183,18 +186,18 @@ func (h *physicsHandler) procConfig(conf config.Config) {
 	h.sJerk = conf.SJerk
 }
 
-func (h *physicsHandler) limitResize(m physics.Move, max vec.Vec4) physics.Move {
+func (h *physicsHandler) limitResize(m physics.Move) physics.Move {
 	if !m.NonEmpty() {
 		return m
 	}
 	for i := 0; i < maxLimitResize; i++ {
-		if m.Vel().Within(max) {
+		if m.Vel().Within(h.maxSV) && m.Vel().Within(h.maxV) {
 			return m
 		}
 		m = m.Scale(resizeScale)
 		//h.head.Write("debug:resizing move to " + m.String())
 	}
-	panic(fmt.Sprintf("move (%v) cannot fit within max velocity (%v)", m, max))
+	panic(fmt.Sprintf("move (%v) cannot fit within max velocity (%v, %v)", m, h.maxSV, h.maxV))
 }
 
 func PhysicsHandler(head, tail io.Conn) {
