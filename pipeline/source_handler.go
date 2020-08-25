@@ -32,8 +32,10 @@ func SourceHandler(head, tail io.Conn) {
 				continue
 			}
 
-			// send to tail before responding ok, incase tail blocks
-			tail.Write(g)
+			if !g.IsM(110) {
+				// send to tail before responding ok, incase tail blocks
+				tail.Write(g)
+			}
 
 			switch g.Num {
 			case -1:

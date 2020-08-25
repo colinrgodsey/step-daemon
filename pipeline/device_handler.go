@@ -17,7 +17,7 @@ const (
 	pFail    = 3
 
 	NumPages           = 16
-	MaxPendingCommands = 4
+	MaxPendingCommands = 3
 
 	maxN = 99
 )
@@ -80,7 +80,7 @@ func (h *deviceHandler) tailRead(msg io.Any) {
 				h.head.Write("warn:pending OK count dropped below 0")
 				h.pendingCommands = 0
 			}
-			//h.head.Write("info:" + msg)
+			//h.head.Write("debug:" + msg)
 		} else {
 			h.head.Write(msg)
 		}
@@ -116,7 +116,7 @@ func (h *deviceHandler) sendGCode(g gcode.GCode) {
 	g.Num = h.n
 	h.n++
 	str := g.String()
-	//h.head.Write("info:send " + str)
+	//h.head.Write("debug:send " + str)
 	h.tail.Write(str)
 	h.pendingCommands++
 }

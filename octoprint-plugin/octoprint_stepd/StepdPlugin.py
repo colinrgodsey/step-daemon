@@ -6,6 +6,7 @@ import octoprint.plugin
 import os.path
 
 from .StepdThread import StepdThread
+from .StepdService import StepdService
 
 class StepdPlugin(octoprint.plugin.SettingsPlugin,
                   octoprint.plugin.AssetPlugin,
@@ -38,7 +39,7 @@ class StepdPlugin(octoprint.plugin.SettingsPlugin,
 
   def on_api_command(self, command, data):
     if command == "update":
-      self.thread.update_stepd()
+      self.update_stepd()
 
   def on_api_get(self, request):
     return flask.jsonify(
@@ -94,25 +95,32 @@ class StepdPlugin(octoprint.plugin.SettingsPlugin,
     )
 
   ##~~ Serial factory hook
+
   def serial_factory_hook(self, comm_instance, port, baudrate, read_timeout, *args, **kwargs):
     comm_instance._log("Connecting to Step Daemon")
 
-    if not self.is_running():
-      msg = 'Step Daemon is not running yet.'
+    if self.is_running():
+      msg = 'Step Daemon is still updating.'
       comm_instance._log(msg)
       raise Exception(msg)
 
-    port = '/tmp/pty-stepd-client'
-
-    return serial.Serial(str(port), 230400, writeTimeout=30000)
+    return StepdService(self.get_plugin_data_folder(), self._logger,
+                        self._settings.get_all_data(), port, baudrate)
 
   ##~~ StartupPlugin mixin
+
   def on_after_startup(self):
+    self.update_stepd()
+
+  ##~~ Other stuff
+
+  def update_stepd(self):
+    if self.is_running():
+      self.thread.close()
+
     self.thread = StepdThread(self.get_plugin_data_folder(), self._logger,
                               self._settings.get_all_data(), self.on_stepd_start)
     self.thread.start()
-
-  ##~~ Other stuff
 
   def is_running(self):
     return self.thread and self.thread.running

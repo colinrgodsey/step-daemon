@@ -29,6 +29,7 @@ type cfHandler struct {
 	samples []bed.Sample
 	zFunc   bed.ZFunc
 
+	isReady   bool
 	confReady chan interface{}
 }
 
@@ -36,10 +37,13 @@ func (h *cfHandler) headRead(msg io.Any) {
 	switch msg := msg.(type) {
 	case gcode.GCode:
 		switch {
+		//TODO: read settings again after load settings
 		case msg.IsG(29): // z probe
 			// send verbose version
 			h.tail.Write(gcode.New('G', 29, gcode.Arg('V', 3), "T"))
 			return
+		case msg.IsM(501):
+			defer h.gatherSettings()
 		}
 	}
 	h.tail.Write(msg)
@@ -57,9 +61,12 @@ func (h *cfHandler) tailRead(msg io.Any) {
 			h.head.Write("info:collection bed-level samples")
 			h.samples = nil
 		} else if strings.Index(msg, confEnd) == 0 {
-			h.confReady <- nil
+			if !h.isReady {
+				h.confReady <- nil
+				h.isReady = true
+			}
 		} else if msg == "pages_ready" {
-			h.tail.Write(gcode.New('M', 503)) // report settings
+			h.gatherSettings()
 		} else if msg == "__send_config" {
 			bytes, err := json.Marshal(h.conf)
 			if err == nil {
@@ -73,6 +80,11 @@ func (h *cfHandler) tailRead(msg io.Any) {
 		}
 	}
 	h.head.Write(msg)
+}
+
+func (h *cfHandler) gatherSettings() {
+	h.head.Write("info:gathering device settings")
+	h.tail.Write(gcode.New('M', 503)) // report settings
 }
 
 func (h *cfHandler) checkConfig(line string) {
