@@ -16,11 +16,13 @@ class StepdService():
     self.timeout = 30
     self.bin_path = os.path.join(self.base_path, 'step-daemon')
 
-    logger.info("Starting service on device " + str(device))
+    args = [self.bin_path, 'device='+str(self.device), 
+            'baud='+str(self.baudrate), 'config=config.json']
+
+    logger.info("Starting service: " + str(args))
 
     self.update_config()
-    self.process = subprocess.Popen([self.bin_path, 'device='+str(self.device), 
-                                 'baud='+str(self.baudrate), 'config=config.json'],
+    self.process = subprocess.Popen(args,
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE,
                                stdin=subprocess.PIPE,
@@ -51,7 +53,7 @@ class StepdService():
     data = {
       'sjerk': sjerk,
       'format': self.settings['format'],
-      'ticks-per-second': self.settings['tickrate'],
+      'ticks-per-second': int(self.settings['tickrate']),
       'bed-samples-path': './bedlevel.json',
 
       'bed-max': [self.settings['bedx'], self.settings['bedy']]
@@ -81,3 +83,4 @@ class StepdServiceLogger(Thread):
 
     self.process.stdout.close()
     self.process.stdin.close()
+    self.logger.info('service terminated')
