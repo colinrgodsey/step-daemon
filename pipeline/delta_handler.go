@@ -43,8 +43,9 @@ func (h *deltaHandler) headRead(msg io.Any) {
 		case msg.IsG(92): // set pos
 			h.pos = msg.Args.GetVec4(h.pos)
 		case msg.IsM(114): // get pos
-			h.syncC = make(chan vec.Vec4)
-			defer h.getPos()
+			c := make(chan vec.Vec4)
+			h.syncC = c
+			defer h.getPos(c)
 		case msg.IsM(220): // set feedrate
 			if x, ok := msg.Args.GetFloat('S'); ok {
 				h.frScale = x / 100.0
@@ -81,6 +82,7 @@ func (h *deltaHandler) tailRead(msg io.Any) {
 			if h.syncC != nil {
 				h.info("syncd with device position")
 				h.syncC <- vec.NewVec4(x, y, z, e)
+				h.syncC = nil
 			}
 		}
 	}
@@ -88,10 +90,10 @@ func (h *deltaHandler) tailRead(msg io.Any) {
 }
 
 //TODO: i hate this, replace this later
-func (h *deltaHandler) getPos() {
+func (h *deltaHandler) getPos(c <-chan vec.Vec4) {
 	h.info("syncing with device position")
 	select {
-	case pos := <-h.syncC:
+	case pos := <-c:
 		h.pos = pos
 	case <-time.After(syncTimeout * time.Second):
 		panic("timed out while syncing position")
