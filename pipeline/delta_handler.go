@@ -12,7 +12,7 @@ import (
 	"github.com/colinrgodsey/step-daemon/vec"
 )
 
-const syncTimeout = 20 // seconds
+const syncTimeout = 10 * 60 // seconds
 
 type deltaHandler struct {
 	head, tail io.Conn
