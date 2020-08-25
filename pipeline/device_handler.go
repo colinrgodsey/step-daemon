@@ -101,6 +101,8 @@ func (h *deviceHandler) drain() {
 			h.sendG6(msg)
 		case gcode.GCode:
 			h.sendGCode(msg)
+		case string:
+			h.tail.Write(msg)
 		}
 		h.q.Remove(e)
 	}

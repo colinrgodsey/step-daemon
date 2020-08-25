@@ -16,7 +16,6 @@ func SourceHandler(head, tail io.Conn) {
 		//TODO: actual N increment testing
 		for msg := range head.Rc() {
 			str, ok := msg.(string) // only strings
-
 			if !ok {
 				tail.Write(msg)
 				continue
@@ -39,7 +38,6 @@ func SourceHandler(head, tail io.Conn) {
 			switch g.Num {
 			case -1:
 				head.Write("ok")
-				//head.Write(str)
 			default:
 				head.Write(fmt.Sprintf("ok N%v", g.Num))
 			}
@@ -51,9 +49,9 @@ func SourceHandler(head, tail io.Conn) {
 			head.Write("info:device ready for paged data, starting...")
 			started = true
 			go readFunc()
-		} else if str := msg.(string); str == "echo:start" && started {
+		} else if str := msg.(string); (str == "echo:start" || str == "pages_ready") && started {
 			//TODO: redo this with an appropriate close pattern on the channels
-			fmt.Println("error:device restart detected")
+			fmt.Println("fatal:device restart detected")
 			os.Exit(1)
 		}
 		head.Write(msg)

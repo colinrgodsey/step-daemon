@@ -17,7 +17,7 @@ import (
 type stepHandler struct {
 	head, tail io.Conn
 
-	stepsPerMM     vec.Vec4
+	spmm           vec.Vec4
 	ticksPerSecond int
 	eAdvanceK      float64
 	flowRate       float64
@@ -40,8 +40,9 @@ func (h *stepHandler) headRead(msg io.Any) {
 	case gcode.GCode:
 		switch {
 		case msg.IsG(92): // set pos
-			pos := msg.Args.GetVec4(h.vPos)
-			h.updateSPos(pos)
+			h.updateSPos(msg.Args.GetVec4(h.vPos))
+		case msg.IsM(92): // set steps/mm
+			h.spmm = msg.Args.GetVec4(h.spmm)
 		case msg.IsM(221): // set flow rate
 			if f, ok := msg.Args.GetFloat('S'); ok {
 				flowRate := f / 100.0
@@ -185,8 +186,7 @@ func (h *stepHandler) zOffsAt(pos f64.Vec2) float64 {
 	return z
 }
 
-func (h *stepHandler) updateSPos(pos vec.Vec4) [4]int {
-	var ds [4]int
+func (h *stepHandler) updateSPos(pos vec.Vec4) (ds [4]int) {
 	for i := range ds {
 		offs := 0.0
 		scale := 1.0
@@ -196,13 +196,13 @@ func (h *stepHandler) updateSPos(pos vec.Vec4) [4]int {
 		case 3:
 			scale = h.flowRate
 		}
-		df := (h.vPos.GetAt(i) + offs) * h.stepsPerMM.GetAt(i) * scale
+		df := (pos.GetAt(i) + offs) * h.spmm.GetAt(i) * scale
 		di := int64(math.Round(df))
 		ds[i] = int(di - h.sPos[i])
 		h.sPos[i] = di
 	}
 	h.vPos = pos
-	return ds
+	return
 }
 
 func (h *stepHandler) procBlock(block physics.MotionBlock) {
@@ -220,7 +220,7 @@ func (h *stepHandler) procBlock(block physics.MotionBlock) {
 }
 
 func (h *stepHandler) configUpdate(conf config.Config) {
-	h.stepsPerMM = conf.StepsPerMM
+	//h.spmm = conf.StepsPerMM
 	h.ticksPerSecond = conf.TicksPerSecond
 	h.formatName = conf.Format
 	h.format = config.GetPageFormat(h.formatName)

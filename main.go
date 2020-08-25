@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	gio "io"
 	"net"
@@ -14,7 +13,6 @@ import (
 	"time"
 
 	"github.com/colinrgodsey/serial"
-	"github.com/colinrgodsey/step-daemon/config"
 	"github.com/colinrgodsey/step-daemon/io"
 	"github.com/colinrgodsey/step-daemon/pipeline"
 
@@ -42,9 +40,9 @@ func handler(head io.Conn, size int, h func(head, tail io.Conn)) (tail io.Conn) 
 	return
 }
 
-func stepdPipeline(c io.Conn) io.Conn {
+func stepdPipeline(c io.Conn, args argMap) io.Conn {
 	c = handler(c, normalPlannerSize, pipeline.SourceHandler)
-	c = handler(c, 1, pipeline.BedLevelHandler)
+	c = handler(c, 1, pipeline.ConfigHandler(args["config"]))
 	c = handler(c, 1, pipeline.DeltaHandler)
 	c = handler(c, 1, pipeline.PhysicsHandler)
 	c = handler(c, pipeline.NumPages, pipeline.StepHandler)
@@ -70,12 +68,6 @@ func bailArgs() {
 func main() {
 	args := loadArgs()
 
-	conf, err := config.LoadConfig(args["config"])
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
 	if args.has("trace") {
 		trace.Start(os.Stderr)
 		defer trace.Stop()
@@ -91,11 +83,10 @@ func main() {
 		}()
 	}
 
-	c := io.NewConn(8, 8)
-	c.Write(conf)
+	c := io.NewConn(32, 32)
 	go io.LinePipe(os.Stdin, os.Stdout, c.Flip())
-	c = stepdPipeline(c)
-	tailSink(c, args, conf)
+	c = stepdPipeline(c, args)
+	tailSink(c, args)
 }
 
 func closeOnExit(closer func()) {
@@ -121,7 +112,7 @@ func loadArgs() argMap {
 }
 
 //TODO: need the auto restart loop here
-func tailSink(c io.Conn, args argMap, conf config.Config) {
+func tailSink(c io.Conn, args argMap) {
 	var tail gio.ReadWriteCloser
 	var err error
 
@@ -146,9 +137,9 @@ func tailSink(c io.Conn, args argMap, conf config.Config) {
 			fmt.Println(err)
 			bailArgs()
 		}
-		bytes, _ := json.Marshal(conf)
+		/*bytes, _ := json.Marshal(conf)
 		tail.Write(bytes)
-		tail.Write([]byte("\n"))
+		tail.Write([]byte("\n"))*/
 	} else {
 		bailArgs()
 	}

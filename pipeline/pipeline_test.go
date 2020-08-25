@@ -13,7 +13,7 @@ import (
 	"github.com/colinrgodsey/step-daemon/io"
 )
 
-func TestBedLevelHandler(t *testing.T) {
+func TestConfigHandler(t *testing.T) {
 	samples := []bed.Sample{
 		{10, 0, 10},
 		{10, 1, 10},
@@ -28,20 +28,21 @@ func TestBedLevelHandler(t *testing.T) {
 	conf := config.Config{BedMax: f64.Vec2{100, 100}, BedSamplesPath: "test-samples.json"}
 	defer os.Remove(conf.BedSamplesPath)
 
-	head := io.NewConn(0, 0)
-	tail := io.NewConn(0, 0)
-	go BedLevelHandler(head.Flip(), tail.Flip())
+	head := io.NewConn(32, 32)
+	tail := io.NewConn(32, 32)
+	go ConfigHandler("../config.hjson")(head.Flip(), tail.Flip())
 
 	go func() {
 		head.Write(conf)
+		head.Write(confEnd)
 		head.Write(gcode.New('G', 29))
-		tail.Write(blStartString)
 
+		tail.Write(blStart)
 		for _, s := range samples {
 			msg := fmt.Sprintf("Bed X: %v Y: %v Z: %v ", s.X, s.Y, s.Offs)
 			tail.Write(msg)
 		}
-		tail.Write(blEndString)
+		tail.Write(blEnd)
 	}()
 
 	var zFun bed.ZFunc

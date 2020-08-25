@@ -11,10 +11,7 @@ import (
 )
 
 type Config struct {
-	Acceleration   vec.Vec4 `json:"acceleration"`
-	Jerk           vec.Vec4 `json:"jerk"`
 	SJerk          vec.Vec4 `json:"s-jerk"`
-	StepsPerMM     vec.Vec4 `json:"steps-per-mm"`
 	TicksPerSecond int      `json:"ticks-per-second"`
 	Format         string   `json:"format"`
 	BedMax         f64.Vec2 `json:"bed-max"`

@@ -23,7 +23,10 @@ const (
 type physicsHandler struct {
 	head, tail io.Conn
 
-	sJerk, acc, maxV vec.Vec4
+	sJerk, acc, spmm vec.Vec4
+
+	sps  float64
+	maxV vec.Vec4
 
 	lastMove, curMove physics.Move
 }
@@ -44,6 +47,10 @@ func (h *physicsHandler) headRead(msg io.Any) {
 		switch {
 		case msg.IsM(201): // set max accel
 			h.acc = msg.Args.GetVec4(h.acc)
+		case msg.IsM(92): // set steps/mm
+			h.spmm = msg.Args.GetVec4(h.spmm)
+			h.maxV = h.spmm.Inv().Mul(h.sps)
+			h.head.Write("info:max vel (step limit) is " + h.maxV.String())
 		}
 	case config.Config:
 		h.procConfig(msg)
@@ -172,16 +179,10 @@ func (h *physicsHandler) endBlock() {
 
 func (h *physicsHandler) procConfig(conf config.Config) {
 	format := config.GetPageFormat(conf.Format)
-	fac := float64(conf.TicksPerSecond) * float64(format.SegmentSteps)
-
-	h.maxV = conf.StepsPerMM.Inv().Mul(fac)
+	h.sps = float64(conf.TicksPerSecond * format.SegmentSteps)
 	h.sJerk = conf.SJerk
-	h.acc = conf.Acceleration
-
-	h.head.Write("info:max vel (step limit) is " + h.maxV.String())
 }
 
-//TODO: this can be done with an O(1) linear resize...
 func (h *physicsHandler) limitResize(m physics.Move, max vec.Vec4) physics.Move {
 	if !m.NonEmpty() {
 		return m

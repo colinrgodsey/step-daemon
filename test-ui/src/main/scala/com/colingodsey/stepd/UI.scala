@@ -144,6 +144,37 @@ case class PageData(idx: Int, data: ByteString)
 
 object MovementProcessor {
   var f: Double => Option[Vec4] = null
+
+  val settingsReponse =
+    """
+      |echo:  G21    ; Units in mm (mm)
+      |echo:  M149 C ; Units in Celsius
+      |echo:; Filament settings: Disabled
+      |echo:  M200 S0 D1.75
+      |echo:; Steps per unit:
+      |echo: M92 X80.00 Y80.00 Z1600.00 E376.14
+      |echo:; Maximum feedrates (units/s):
+      |info:max vel (step limit) is [2304 2304 115.2 490.0303078640932]
+      |echo:  M203 X300.00 Y300.00 Z7.00 E50.00
+      |echo:; Maximum Acceleration (units/s2):
+      |echo:  M201 X3000.00 Y3000.00 Z100.00 E10000.00
+      |echo:; Acceleration (units/s2): P<print_accel> R<retract_accel> T<travel_accel>
+      |echo:  M204 P1000.00 R2000.00 T3000.00
+      |echo:; Advanced: B<min_segment_time_us> S<min_feedrate> T<min_travel_feedrate> X<max_x_jerk> Y<max_y_jerk> Z<max_z_jerk> E<max_e_jerk>
+      |echo:  M205 B20000.00 S0.00 T0.00 X4.00 Y7.00 Z0.20 E2.50
+      |echo:; Home offset:
+      |echo:  M206 X0.00 Y0.00 Z0.00
+      |echo:; Auto Bed Leveling:
+      |echo:  M420 S0 Z0.00
+      |echo:; Material heatup parameters:
+      |echo:  M145 S0 H215 F0
+      |echo:  M145 S1 H240 F0
+      |echo:  M145 S2 H230 F0
+      |echo:; PID settings:
+      |echo:  M301 P9.84 I0.50 D48.17
+      |echo:; Z-Probe Offset (mm):
+      |echo:  M851 X39.00 Y-42.00 Z0.00
+      |""".stripMargin
 }
 
 class MovementProcessor(conn: ActorRef) extends Actor with ActorLogging {
@@ -177,6 +208,8 @@ class MovementProcessor(conn: ActorRef) extends Actor with ActorLogging {
   val lineSerial = context.actorOf(Props[LineSerial])
 
   MovementProcessor.f = getPos(_)
+  context watch conn
+  conn ! Write(ByteString("__send_config\n"))
 
   def getDirectionScale(axis: Int) =
     if (lastDirection(axis)) 1
@@ -306,7 +339,6 @@ class MovementProcessor(conn: ActorRef) extends Actor with ActorLogging {
       case x: JDouble => x.num
     }
 
-    val ssm = (v \\ "steps-per-mm").asInstanceOf[JArray].arr.map(toDoub)
     val tps = toDoub(v \\ "ticks-per-second")
     val fmt = (v \\ "format") match {
       case JString("SP_4x4D_128") => PageFormat.SP_4x4D_128
@@ -314,7 +346,6 @@ class MovementProcessor(conn: ActorRef) extends Actor with ActorLogging {
       case JString("SP_4x1_512") => PageFormat.SP_4x1_512
     }
 
-    stepsPer = Vec4(ssm)
     ticksPerSecond = tps.toInt
     format = fmt
 
@@ -341,18 +372,24 @@ class MovementProcessor(conn: ActorRef) extends Actor with ActorLogging {
   }
 
   def process(cmd: GCode.Command): Unit = cmd match {
-    case cmd: GDirectMove => process(cmd)
     case GetPos =>
       log.info("sending pos")
-      val str = "X:0.00 Y:0.00 Z:10.00 E:0.00 Count X:0 Y:0 Z:16000"
-      conn ! Write(ByteString(s"$str\n"))
+      conn ! Write(ByteString("X:0.00 Y:0.00 Z:10.00 E:0.00 Count X:0 Y:0 Z:16000\n"))
+    case ReportSettings =>
+      log.info("sending \"device\" settings")
+      conn ! Write(ByteString(s"${MovementProcessor.settingsReponse}\n"))
+    case cmd: SetStepsPerUnit =>
+      stepsPer = Vec4(cmd.x.getOrElse(0), cmd.y.getOrElse(0), cmd.z.getOrElse(0), cmd.e.getOrElse(0))
+    case cmd: GDirectMove => process(cmd)
     case _ =>
+      log.info(cmd.toString)
   }
 
   def receive: Receive = {
     case Received(data) => lineSerial ! data
 
     case TextResponse(str) =>
+      //log.info(str)
       if (str(0) == '{') {
         parseConfig(str)
       } else {
