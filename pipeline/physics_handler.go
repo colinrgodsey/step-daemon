@@ -13,7 +13,7 @@ import (
 
 const (
 	maxLimitResize  = 30
-	maxSCurveResize = 35 //15
+	maxSCurveResize = 50
 	maxNormResize   = 100
 	resizeScale     = 0.8
 
@@ -35,7 +35,7 @@ type physicsHandler struct {
 func (h *physicsHandler) headRead(msg io.Any) {
 	switch msg := msg.(type) {
 	case physics.Move:
-		if msg.IsEOrZOnly() {
+		if !msg.IsPrintMove() {
 			h.endBlock()
 			h.procMove(msg)
 			h.endBlock()

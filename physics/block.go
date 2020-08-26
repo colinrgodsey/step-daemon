@@ -119,6 +119,8 @@ func BlockIterator(block MotionBlock, samplesPerSecond, eAdvanceK float64) <-cha
 		move := block.GetMove()
 		isPrint := move.IsPrintMove()
 
+		shape.Cache()
+
 		samples := shape.Dt() * samplesPerSecond
 		div := 1.0 / samplesPerSecond
 

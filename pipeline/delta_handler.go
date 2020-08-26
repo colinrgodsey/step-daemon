@@ -80,10 +80,10 @@ func (h *deltaHandler) tailRead(msg io.Any) {
 
 			//TODO: still not happy about this pattern
 			if h.syncC != nil {
-				h.info("syncd with device position")
 				h.syncC <- vec.NewVec4(x, y, z, e)
 				h.syncC = nil
 			}
+			return
 		}
 	}
 	h.head.Write(msg)
@@ -94,12 +94,11 @@ func (h *deltaHandler) getPos(c <-chan vec.Vec4) {
 	h.info("syncing with device position")
 	select {
 	case pos := <-c:
-		h.pos = pos
+		h.info("syncd with device position")
+		h.headRead(gcode.New('G', 92, gcode.ArgV(pos)...))
 	case <-time.After(syncTimeout * time.Second):
 		panic("timed out while syncing position")
 	}
-	h.syncC = nil
-	h.headRead(gcode.New('G', 92, gcode.ArgV(h.pos)...))
 }
 
 func (h *deltaHandler) procGMove(g gcode.GCode) {

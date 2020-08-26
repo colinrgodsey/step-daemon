@@ -18,6 +18,8 @@ func (s pulse) IsValid() bool {
 	return s.dt >= 0
 }
 
+func (s pulse) Cache() {}
+
 func (s pulse) Der1At(dt float64) float64 {
 	return 0
 }
@@ -35,7 +37,8 @@ func (s pulse) Int2At(dt, c0, c1 float64) float64 {
 }
 
 func (s pulse) Int3At(dt, c0, c1, c2 float64) float64 {
-	return c0 + c1*dt + c2*dt*dt/2.0 + s.dy*dt*dt*dt/6.0
+	dt2 := dt * dt
+	return c0 + c1*dt + c2*dt2/2.0 + s.dy*dt*dt2/6.0
 }
 
 func (s pulse) String() string {

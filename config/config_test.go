@@ -12,7 +12,7 @@ func TestConfig(t *testing.T) {
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
-	if conf.Acceleration.Dist() == 0 {
+	if conf.BedMax.Mag() == 0 {
 		t.Fatalf("Missing acceleration")
 	}
 

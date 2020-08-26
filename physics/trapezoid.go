@@ -5,6 +5,9 @@ import "fmt"
 type trapezoid struct {
 	head, middle, tail  Shape
 	area, c, dt, dtTail float64
+
+	applyCache float64
+	cacheReady bool
 }
 
 func (s *trapezoid) Area() float64 {
@@ -17,6 +20,11 @@ func (s *trapezoid) Dt() float64 {
 
 func (s *trapezoid) IsValid() bool {
 	return s.head.IsValid() && s.middle.IsValid() && s.tail.IsValid()
+}
+
+func (s *trapezoid) Cache() {
+	s.applyCache = s.Apply(s.dtTail)
+	s.cacheReady = true
 }
 
 func (s *trapezoid) Der1At(dt float64) float64 {
@@ -32,12 +40,14 @@ func (s *trapezoid) Der1At(dt float64) float64 {
 
 func (s *trapezoid) Apply(dt float64) float64 {
 	switch {
+	case dt == s.dtTail && s.cacheReady:
+		return s.applyCache
 	case dt > s.dtTail:
 		return s.tail.Int1At(dt-s.dtTail, s.Apply(s.dtTail))
 	case dt > s.head.Dt():
 		return s.Apply(s.head.Dt())
 	default:
-		return s.head.Int1At(dt, s.c)
+		return s.head.Int1At(dt, s.c) //TODO: should s.c be s.Apply(0) ? probably doesnt matter
 	}
 }
 
@@ -81,5 +91,6 @@ func Trapezoid(head, tail Shape, area, c float64) Shape {
 	return &trapezoid{
 		head, middle, tail,
 		area, c, dt, dtTail,
+		0, false,
 	}
 }

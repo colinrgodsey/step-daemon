@@ -4,6 +4,7 @@ type Shape interface {
 	Area() float64
 	Dt() float64
 	IsValid() bool
+	Cache()
 
 	Der1At(dt float64) float64
 
