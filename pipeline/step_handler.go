@@ -240,6 +240,8 @@ func (h *stepHandler) configUpdate(conf config.Config) {
 func StepHandler(head, tail io.Conn) {
 	h := stepHandler{
 		head: head, tail: tail,
+
+		flowRate: 1.0,
 	}
 
 	go func() {
