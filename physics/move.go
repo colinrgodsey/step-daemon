@@ -59,11 +59,7 @@ func (m *Move) String() string {
 }
 
 func (m *Move) IsEOrZOnly() bool {
-	d := m.delta
-	if d.X() != 0 || d.Y() != 0 {
-		return false
-	}
-	return d.Z() == 0 || d.E() == 0
+	return m.delta.X() == 0 && m.delta.Y() == 0
 }
 
 func (m *Move) IsPrintMove() bool {

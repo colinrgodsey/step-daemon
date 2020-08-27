@@ -3,7 +3,8 @@ package physics
 import "fmt"
 
 type trapezoid struct {
-	head, middle, tail  Shape
+	head, tail          Shape
+	middle              pulse
 	area, c, dt, dtTail float64
 
 	applyCache float64
@@ -84,12 +85,12 @@ func (s *trapezoid) String() string {
 func Trapezoid(head, tail Shape, area, c float64) Shape {
 	headArea := Int2(head, 0, c)
 	tailArea := Int2(tail, 0, Int1(head, c))
-	middle := Pulse(Int1(head, c), area-headArea-tailArea)
+	middle := Pulse(Int1(head, c), area-headArea-tailArea).(pulse)
 	dtTail := head.Dt() + middle.Dt()
 	dt := dtTail + tail.Dt()
 
 	return &trapezoid{
-		head, middle, tail,
+		head, tail, middle,
 		area, c, dt, dtTail,
 		0, false,
 	}

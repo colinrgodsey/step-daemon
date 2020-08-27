@@ -150,29 +150,32 @@ func (h *stepHandler) procSegment(ds [4]int) bool {
 		return i
 	}
 
-	if !h.format.Directional {
-		h.checkDirection(ds)
-	}
 	for di, d := range ds {
 		if ia(d) > h.format.SegmentSteps {
 			// splits should be very rare, but still may happen
-			msg := fmt.Sprintf("warn:step segment split for axis %v (%v v %v)", di, ia(d), h.format.SegmentSteps)
+			msg := fmt.Sprintf("warn:step segment split for axis %v (%v v %v)", di, d, h.format.SegmentSteps)
 			h.head.Write(msg)
-			var ds0 [4]int
-			for i := range ds {
-				ds0[i] = ds[i] / 2
-				ds[i] -= ds0[i]
-			}
-			h.procSegment(ds0)
-			h.procSegment(ds)
-			return false
+			goto split
 		}
+	}
+	if !h.format.Directional {
+		h.checkDirection(ds)
 	}
 	h.procSegmentBytes(ds)
 	if h.segmentIdx == h.format.Segments {
 		h.flushChunk()
 	}
 	return true
+
+split:
+	var ds0 [4]int
+	for i := range ds0 {
+		ds0[i] = ds[i] / 2
+		ds[i] -= ds0[i]
+	}
+	h.procSegment(ds0)
+	h.procSegment(ds)
+	return false
 }
 
 func (h *stepHandler) zOffsAt(pos f64.Vec2) float64 {
@@ -211,7 +214,7 @@ func (h *stepHandler) procBlock(block physics.MotionBlock) {
 	failed := false
 	for pos := range physics.BlockIterator(block, samplesPerSecond, h.eAdvanceK) {
 		ds := h.updateSPos(pos)
-		failed = failed || !h.procSegment(ds)
+		failed = !h.procSegment(ds) || failed
 	}
 	if failed {
 		move := block.GetMove()

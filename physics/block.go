@@ -121,11 +121,11 @@ func BlockIterator(block MotionBlock, samplesPerSecond, eAdvanceK float64) <-cha
 
 		shape.Cache()
 
-		samples := shape.Dt() * samplesPerSecond
-		div := 1.0 / samplesPerSecond
+		samples := int(shape.Dt() * samplesPerSecond)
+		div := shape.Dt() / float64(samples)
 
-		for i := 0.0; i < samples; i++ {
-			dt := i * div
+		for i := 0; i < samples; i++ {
+			dt := float64(i) * div
 			d := clamp(shape.Int1At(dt, 0), move.Delta().Dist())
 			pos := move.From().Add(move.Delta().Norm().Mul(d))
 

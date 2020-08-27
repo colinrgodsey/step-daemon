@@ -138,10 +138,15 @@ func (h *physicsHandler) procMoveSafe(next physics.Move, maxResizes int, useSTra
 		case nil:
 			h.tail.Write(block)
 			goto success
-		case physics.ErrEaseLimitPre:
+		//TODO: figure out which of these is better....
+		/*case physics.ErrEaseLimitPre:
 			curMove = curMove.Scale(resizeScale)
 		case physics.ErrEaseLimitPost:
-			next = next.Scale(resizeScale)
+			next = next.Scale(resizeScale)*/
+		case physics.ErrEaseLimitPre, physics.ErrEaseLimitPost:
+			curMove = curMove.Scale(resizeScale)
+		default:
+			panic(err)
 		}
 	}
 	return false
@@ -150,6 +155,11 @@ success:
 	h.curMove = curMove
 	h.pushMove(next)
 	return true
+}
+
+func (h *physicsHandler) pushMove(next physics.Move) {
+	h.lastMove = h.curMove
+	h.curMove = next
 }
 
 /* TODO: we need to look at the number of ticks a move will make, and figure out what shape to use!!
@@ -168,12 +178,6 @@ func (h *physicsHandler) procMove(next physics.Move) {
 	}
 	panic(fmt.Sprintf("failed to ease FR for block. Pre: %v, Move: %v, Post: %v", &h.lastMove, &h.curMove, &next))
 }
-
-func (h *physicsHandler) pushMove(next physics.Move) {
-	h.lastMove = h.curMove
-	h.curMove = next
-}
-
 func (h *physicsHandler) endBlock() {
 	h.procMove(physics.Move{})
 	h.procMove(physics.Move{})
