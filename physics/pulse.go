@@ -42,7 +42,7 @@ func (s pulse) Int3At(dt, c0, c1, c2 float64) float64 {
 }
 
 func (s pulse) String() string {
-	return fmt.Sprintf("Pulse(%v, %v)", s.dy, s.area)
+	return fmt.Sprintf("Pulse(dy: %v, area: %v)", s.dy, s.area)
 }
 
 func Pulse(dy, area float64) Shape {

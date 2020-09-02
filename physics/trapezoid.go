@@ -79,7 +79,7 @@ func (s *trapezoid) Int3At(dt, c0, c1, c2 float64) float64 {
 }
 
 func (s *trapezoid) String() string {
-	return fmt.Sprintf("Trapezoid(%v, %v, %v, %v)", s.head, s.tail, s.area, s.c)
+	return fmt.Sprintf("Trapezoid(head: %v, tail: %v, area: %v, c: %v)", s.head, s.tail, s.area, s.c)
 }
 
 func Trapezoid(head, tail Shape, area, c float64) Shape {

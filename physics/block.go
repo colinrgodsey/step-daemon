@@ -51,20 +51,18 @@ func (b trapBlock) GetMove() Move {
 TODO: Processing the shapes here should generate and use some kind of table
 of cached values.
 */
-func STrapBlock(
-	frStart, frStartJerk, frAccel float64,
-	frJerk float64, move Move,
-	frDeccel, frEndJerk, frEnd float64) (MotionBlock, error) {
+func STrapBlock(frJerk, frAccel, frStart float64,
+	move Move, frEnd float64) (block MotionBlock, err error) {
 
 	pre := Trapezoid(
-		Pulse(frStartJerk, frAccel),
+		Pulse(frJerk, frAccel),
 		Pulse(-frJerk, -frAccel),
 		move.Fr()-frStart, 0,
 	)
 
 	post := Trapezoid(
-		Pulse(-frJerk, frDeccel),
-		Pulse(frEndJerk, -frDeccel),
+		Pulse(-frJerk, -frAccel),
+		Pulse(frJerk, frAccel),
 		frEnd-move.Fr(), 0,
 	)
 
@@ -73,19 +71,21 @@ func STrapBlock(
 		move.Delta().Dist(),
 		frStart)
 
+	block = sTrapBlock{shape: shape, move: move}
+
 	if !shape.IsValid() {
 		if move.Fr() > frEnd {
-			return nil, ErrEaseLimitPre
+			err = ErrEaseLimitPre
+		} else {
+			err = ErrEaseLimitPost
 		}
-		return nil, ErrEaseLimitPost
 	}
-
-	return sTrapBlock{shape: shape, move: move}, nil
+	return
 }
 
-func TrapBlock(frStart, frAccel float64, move Move, frDeccel, frEnd float64) (MotionBlock, error) {
+func TrapBlock(frAccel, frStart float64, move Move, frEnd float64) (MotionBlock, error) {
 	pre := Pulse(frAccel, move.Fr()-frStart)
-	post := Pulse(frDeccel, frEnd-move.Fr())
+	post := Pulse(-frAccel, frEnd-move.Fr())
 	shape := Trapezoid(
 		pre, post,
 		move.Delta().Dist(),

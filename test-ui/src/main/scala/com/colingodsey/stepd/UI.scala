@@ -60,7 +60,7 @@ class UI extends Application {
 
       if(MovementProcessor.f != null) {
         MovementProcessor.f(dt * speedScale) foreach { x =>
-          //if(math.random < 0.05) println(x)
+          if(math.random < 0.05) println(x)
           pos = x
         }
       }
@@ -157,7 +157,7 @@ object MovementProcessor {
       |info:max vel (step limit) is [2304 2304 115.2 490.0303078640932]
       |echo:  M203 X300.00 Y300.00 Z7.00 E50.00
       |echo:; Maximum Acceleration (units/s2):
-      |echo:  M201 X3000.00 Y3000.00 Z100.00 E10000.00
+      |echo:  M201 X2000.00 Y1200.00 Z100.00 E1000.00
       |echo:; Acceleration (units/s2): P<print_accel> R<retract_accel> T<travel_accel>
       |echo:  M204 P1000.00 R2000.00 T3000.00
       |echo:; Advanced: B<min_segment_time_us> S<min_feedrate> T<min_travel_feedrate> X<max_x_jerk> Y<max_y_jerk> Z<max_z_jerk> E<max_e_jerk>
@@ -182,7 +182,7 @@ class MovementProcessor(conn: ActorRef) extends Actor with ActorLogging {
   import GCode._
   import com.colingodsey.stepd.Math._
 
-  var ticks = 70000 / 4 * 80.0 //180.0 * ticksPerSecond / format.StepsPerSegment
+  var ticks = 70000 / 4 * 800.0 //180.0 * ticksPerSecond / format.StepsPerSegment
   var idx = 0
 
   var curChunkIdx = -1

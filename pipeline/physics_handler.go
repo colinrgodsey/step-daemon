@@ -13,7 +13,7 @@ import (
 
 const (
 	maxLimitResize  = 30
-	maxSCurveResize = 50
+	maxSCurveResize = 30
 	maxNormResize   = 100
 	resizeScale     = 0.8
 
@@ -73,12 +73,14 @@ the dot product produced is between 0 and acc.length. Should never be 0 for real
 Invalid pre or post moves force a junction fr of 0.
 */
 func (h *physicsHandler) createBlock(pre, move, post physics.Move, useSTrap bool) (physics.MotionBlock, error) {
-	calcJerk := func(x vec.Vec4) float64 {
+	/*calcJerk := func(x vec.Vec4) float64 {
 		if x.Dist() < physics.Eps {
 			return h.sJerk.Dist()
 		}
 		return x.Abs().Norm().Dot(h.sJerk)
 	}
+
+	//TODO: consider allowing some overlap in the shapes that are within classic jerk?
 
 	//TODO: classic jerk allowance is broken...
 	dvStart := move.Vel().Sub(pre.Vel())
@@ -110,7 +112,31 @@ func (h *physicsHandler) createBlock(pre, move, post physics.Move, useSTrap bool
 			frDeccel, frEndJerk, frEnd)
 	}
 	return physics.TrapBlock(
-		frStart, frAccel, move, frDeccel, frEnd)
+		frStart, frAccel, move, frDeccel, frEnd)*/
+
+	frMaxStart := math.Min(pre.Fr(), move.Fr())
+	frStart := 0.0
+	if pre.NonEmpty() {
+		f := pre.Delta().Norm().Dot(move.Delta().Norm())
+		frStart = frMaxStart * clamp(f)
+	}
+
+	frAccel := move.Delta().Abs().Norm().Dot(h.acc)
+	frJerk := move.Delta().Abs().Norm().Dot(h.sJerk)
+
+	frMaxEnd := math.Min(move.Fr(), post.Fr())
+	frEnd := 0.0
+	if post.NonEmpty() {
+		f := move.Delta().Norm().Dot(post.Delta().Norm())
+		frEnd = frMaxEnd * clamp(f)
+	}
+
+	if useSTrap {
+		return physics.STrapBlock(
+			frJerk, frAccel, frStart, move, frEnd)
+	}
+	return physics.TrapBlock(
+		frAccel, frStart, move, frEnd)
 }
 
 /*
@@ -124,14 +150,17 @@ here will slow down the next move.
 
 Slowing the target fr *does not* affect either juction fr.
 */
-func (h *physicsHandler) procMoveSafe(next physics.Move, maxResizes int, useSTrap bool) bool {
+func (h *physicsHandler) procMoveSafe(next physics.Move, maxResizes int, useSTrap bool) (physics.Move, bool) {
+	var block physics.MotionBlock
+	var err error
+
 	curMove := h.curMove
 	if !h.curMove.NonEmpty() {
 		goto success // move is empty, no motion block needed
 	}
 
 	for i := 0; i < maxResizes; i++ {
-		block, err := h.createBlock(h.lastMove, curMove, next, useSTrap)
+		block, err = h.createBlock(h.lastMove, curMove, next, useSTrap)
 
 		//TODO: better resize logic
 		switch err {
@@ -149,12 +178,13 @@ func (h *physicsHandler) procMoveSafe(next physics.Move, maxResizes int, useSTra
 			panic(err)
 		}
 	}
-	return false
+	h.head.Write(fmt.Sprintf("debug:failed block: %v", block.GetShape()))
+	return curMove, false
 
 success:
 	h.curMove = curMove
 	h.pushMove(next)
-	return true
+	return curMove, true
 }
 
 func (h *physicsHandler) pushMove(next physics.Move) {
@@ -169,11 +199,12 @@ Could overlap of 'invalid' start/end dt be used as a factor?
 func (h *physicsHandler) procMove(next physics.Move) {
 	next = h.limitResize(next)
 
-	if h.procMoveSafe(next, maxSCurveResize, true) {
+	var ok bool
+	if _, ok = h.procMoveSafe(next, maxSCurveResize, true); ok {
 		return
 	}
 	h.head.Write(failedSCurve)
-	if h.procMoveSafe(next, maxNormResize, false) {
+	if next, ok = h.procMoveSafe(next, maxNormResize, false); ok {
 		return
 	}
 	panic(fmt.Sprintf("failed to ease FR for block. Pre: %v, Move: %v, Post: %v", &h.lastMove, &h.curMove, &next))
