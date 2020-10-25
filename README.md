@@ -50,5 +50,9 @@ in hot spots where precision can be leveraged safely.
 ```bash 
 cat print.gcode | go run main.go device=/dev/ttyUSB0 baud=500000 config=./config.hjson | grep -v "ok"
 ```
-* Or use the Step Daemon [OctoPrint plugin](https://github.com/colinrgodsey/step-daemon/tree/master/octoprint-plugin).
+* Or use the Step Daemon [OctoPrint plugin](https://github.com/colinrgodsey/step-daemon/tree/master/octoprint-plugin). 
+Plugin can be installed from this URL:
+```
+https://raw.githubusercontent.com/colinrgodsey/maven/master/step-daemon/octoprint-plugin/latest.zip
+```
 
