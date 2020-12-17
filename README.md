@@ -27,7 +27,7 @@ in hot spots where precision can be leveraged safely.
 * **[Go](https://golang.org/)** must be installed from a system package or manually.
 
 ## Marlin Configuration ##
-* Update with [current compatible branch](https://github.com/colinrgodsey/Marlin/tree/direct_stepping).
+* Update with [current compatible branch](hhttps://github.com/MarlinFirmware/Marlin).
 * Only XYZ cartesian builds currently supported (no core or delta support yet).
 * Baud rate of 250kbps or 500kbps suggested for 16MHz devices.
 * Enable *DIRECT_STEPPING* and *ADVANCED_OK*.
