@@ -24,7 +24,7 @@ in hot spots where precision can be leveraged safely.
 
 ## Dependencies ##
 
-* **[Go](https://golang.org/)** must be installed from a system package or manually.
+* **[Go](https://golang.org/)** (1.11+) must be installed from a system package or manually.
 
 ## Marlin Configuration ##
 * Update with [current compatible branch](hhttps://github.com/MarlinFirmware/Marlin).
@@ -48,7 +48,7 @@ in hot spots where precision can be leveraged safely.
 
 * Pipe a gcode file directly to the server:
 ```bash 
-cat print.gcode | go run main.go device=/dev/ttyUSB0 -baud 500000 -config ./config.hjson | grep -v "ok"
+cat print.gcode | go run main.go -device /dev/ttyUSB0 -baud 500000 -config ./config.hjson | grep -v "ok"
 ```
 * Or use the Step Daemon [OctoPrint plugin](https://github.com/colinrgodsey/step-daemon/tree/master/octoprint-plugin). 
 Plugin can be installed from this URL:
