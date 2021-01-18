@@ -24,7 +24,7 @@ class StepdThread(Thread):
     self.timeout = 30
 
     self.repo_path = os.path.join(self.base_path, 'repo')
-    self.bin_path = os.path.join(self.base_path, 'step-daemon')
+    self.bin_path = os.path.join(self.base_path, 'stepd')
 
   ##~~ other stuff
 
@@ -42,7 +42,7 @@ class StepdThread(Thread):
   def go_build(self):
     env = os.environ.copy()
     env['GOARM'] = '7' # rpi go often has wrong arm version
-    process = subprocess.Popen(['go', 'build', '-a'],
+    process = subprocess.Popen(['go', 'build', '-a', './cmd/stepd'],
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE,
                                env=env,
@@ -91,7 +91,7 @@ class StepdThread(Thread):
         return
 
     if self.go_build():
-      bin_path_target = os.path.join(self.repo_path, 'step-daemon')
+      bin_path_target = os.path.join(self.repo_path, 'stepd')
 
       self.logger.info('Copying bin to ' + str(self.bin_path))
       shutil.copyfile(bin_path_target, self.bin_path)

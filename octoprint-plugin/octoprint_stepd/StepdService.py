@@ -12,12 +12,15 @@ class StepdService():
     self.settings = settings
     self.device = device
     self.baudrate = baudrate
+    self.port = device
 
     self.timeout = 30
-    self.bin_path = os.path.join(self.base_path, 'step-daemon')
+    self.bin_path = os.path.join(self.base_path, 'stepd')
 
-    args = [self.bin_path, 'device='+str(self.device), 
-            'baud='+str(self.baudrate), 'config=config.json']
+    args = [self.bin_path,
+            '-device', str(self.device),
+            '-baud', str(self.baudrate),
+            '-config', 'config.json']
 
     logger.info("Starting service: " + str(args))
 
@@ -33,11 +36,16 @@ class StepdService():
 
   ##~~ mock Serial methods
 
-  def readline(self, *args, **kwargs):
-    return self.process.stdout.readline(*args, **kwargs)
+  def readline(self):
+    data = self.process.stdout.readline()
+    data = data.encode('ascii')
+    return data
 
-  def write(self, *args, **kwargs):
-    return self.process.stdin.write(*args, **kwargs)
+  def write(self, data):
+    data = data.decode('ascii')
+    ret = self.process.stdin.write(data)
+    self.process.stdin.flush()
+    return ret
 
   def close(self):
     self.process.kill()
@@ -81,6 +89,11 @@ class StepdServiceLogger(Thread):
           self.logger.info('ERR: %s', output.strip())
         break
 
-    self.process.stdout.close()
-    self.process.stdin.close()
+    try:
+      self.process.stdout.close()
+      self.process.stdin.close()
+      self.process.stderr.close()
+    except:
+      pass
+    
     self.logger.info('service terminated')
