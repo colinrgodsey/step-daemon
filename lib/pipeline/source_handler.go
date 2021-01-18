@@ -48,7 +48,7 @@ func SourceHandler(head, tail io.Conn) {
 
 	for msg := range tail.Rc() {
 		if str := msg.(string); str == "pages_ready" && !started {
-			head.Write("info:device ready for paged data, starting...")
+			head.Write("info:stepd initialized")
 			started = true
 			go readFunc()
 		} else if str := msg.(string); (str == "echo:start" || str == "pages_ready") && started {

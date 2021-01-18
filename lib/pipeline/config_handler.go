@@ -30,7 +30,7 @@ type cfHandler struct {
 	zFunc   bed.ZFunc
 
 	isReady   bool
-	confReady chan interface{}
+	confReady chan struct{}
 }
 
 func (h *cfHandler) headRead(msg io.Any) {
@@ -62,7 +62,8 @@ func (h *cfHandler) tailRead(msg io.Any) {
 			h.samples = nil
 		} else if strings.Index(msg, confEnd) == 0 {
 			if !h.isReady {
-				h.confReady <- nil
+				h.head.Write("info:finished gathering device settings")
+				close(h.confReady)
 				h.isReady = true
 			}
 		} else if msg == "pages_ready" {
@@ -131,7 +132,7 @@ func ConfigHandler(confPath string) func(_, _ io.Conn) {
 		h := cfHandler{
 			head: head, tail: tail,
 
-			confReady: make(chan interface{}),
+			confReady: make(chan struct{}),
 		}
 
 		if conf, err := config.LoadConfig(confPath); err != nil {

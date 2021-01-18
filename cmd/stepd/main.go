@@ -63,14 +63,6 @@ func main() {
 	flag.StringVar(&addr, "addr", "", "Test UI address (debug)")
 	flag.Parse()
 
-	if baud <= 0 {
-		fmt.Println("Baud flag required.")
-		os.Exit(1)
-	} else if devicePath == "" {
-		fmt.Println("Baud flag required.")
-		os.Exit(1)
-	}
-
 	if doTrace {
 		trace.Start(os.Stderr)
 		defer trace.Stop()
