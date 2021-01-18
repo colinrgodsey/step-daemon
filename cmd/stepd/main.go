@@ -116,6 +116,7 @@ func tailSink(c io.Conn, args argMap) {
 	var tail gio.ReadWriteCloser
 	var err error
 
+	//TODO: switch to using "flags" library
 	if args.has("device") && args.has("baud") {
 		baud, err := strconv.Atoi(args["baud"])
 		if err != nil {
