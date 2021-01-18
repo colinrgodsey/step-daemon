@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/colinrgodsey/step-daemon/gcode"
-	"github.com/colinrgodsey/step-daemon/io"
-	"github.com/colinrgodsey/step-daemon/physics"
-	"github.com/colinrgodsey/step-daemon/vec"
+	"github.com/colinrgodsey/step-daemon/lib/gcode"
+	"github.com/colinrgodsey/step-daemon/lib/io"
+	"github.com/colinrgodsey/step-daemon/lib/physics"
+	"github.com/colinrgodsey/step-daemon/lib/vec"
 )
 
 const syncTimeout = 10 * 60 // seconds

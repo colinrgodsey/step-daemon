@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/colinrgodsey/step-daemon/gcode"
-	"github.com/colinrgodsey/step-daemon/io"
+	"github.com/colinrgodsey/step-daemon/lib/gcode"
+	"github.com/colinrgodsey/step-daemon/lib/io"
 )
 
 func SourceHandler(head, tail io.Conn) {

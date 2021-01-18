@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/colinrgodsey/cartesius/f64"
-	"github.com/colinrgodsey/step-daemon/bed"
-	"github.com/colinrgodsey/step-daemon/config"
-	"github.com/colinrgodsey/step-daemon/gcode"
-	"github.com/colinrgodsey/step-daemon/io"
+	"github.com/colinrgodsey/step-daemon/lib/bed"
+	"github.com/colinrgodsey/step-daemon/lib/config"
+	"github.com/colinrgodsey/step-daemon/lib/gcode"
+	"github.com/colinrgodsey/step-daemon/lib/io"
 )
 
 func TestConfigHandler(t *testing.T) {
@@ -30,7 +30,7 @@ func TestConfigHandler(t *testing.T) {
 
 	head := io.NewConn(32, 32)
 	tail := io.NewConn(32, 32)
-	go ConfigHandler("../config.hjson")(head.Flip(), tail.Flip())
+	go ConfigHandler("../../config.hjson")(head.Flip(), tail.Flip())
 
 	go func() {
 		head.Write(conf)

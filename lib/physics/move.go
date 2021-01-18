@@ -3,7 +3,7 @@ package physics
 import (
 	"fmt"
 
-	"github.com/colinrgodsey/step-daemon/vec"
+	"github.com/colinrgodsey/step-daemon/lib/vec"
 )
 
 type Move struct {

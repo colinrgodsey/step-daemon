@@ -3,7 +3,7 @@ package physics
 import (
 	"errors"
 
-	"github.com/colinrgodsey/step-daemon/vec"
+	"github.com/colinrgodsey/step-daemon/lib/vec"
 )
 
 const iteratorChanCap = 64

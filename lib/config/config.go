@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/colinrgodsey/cartesius/f64"
-	"github.com/colinrgodsey/step-daemon/vec"
+	"github.com/colinrgodsey/step-daemon/lib/vec"
 	"github.com/hjson/hjson-go"
 )
 

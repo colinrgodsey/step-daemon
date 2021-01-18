@@ -6,7 +6,7 @@ import (
 )
 
 func TestConfig(t *testing.T) {
-	conf, err := LoadConfig("../config.hjson")
+	conf, err := LoadConfig("../../config.hjson")
 
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)

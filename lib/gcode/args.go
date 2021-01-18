@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/colinrgodsey/step-daemon/vec"
+	"github.com/colinrgodsey/step-daemon/lib/vec"
 )
 
 // Args provides methods for reading tagged args

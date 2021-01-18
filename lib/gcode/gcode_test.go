@@ -3,7 +3,7 @@ package gcode
 import (
 	"testing"
 
-	"github.com/colinrgodsey/step-daemon/vec"
+	"github.com/colinrgodsey/step-daemon/lib/vec"
 )
 
 func TestString(t *testing.T) {

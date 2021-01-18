@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/colinrgodsey/serial"
-	"github.com/colinrgodsey/step-daemon/io"
-	"github.com/colinrgodsey/step-daemon/pipeline"
+	"github.com/colinrgodsey/step-daemon/lib/io"
+	"github.com/colinrgodsey/step-daemon/lib/pipeline"
 
 	"github.com/pkg/profile"
 )
