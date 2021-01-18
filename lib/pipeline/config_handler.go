@@ -16,7 +16,9 @@ import (
 const (
 	blEnd   = "Bilinear Leveling Grid:"
 	blStart = "G29 Auto Bed Leveling"
-	confEnd = "echo:; PID settings:"
+
+	//TODO: this is brittle... need to account for the exact configs we're expecting
+	confEnd = "echo:; Advanced:"
 
 	devSettingsTimeout = 10 * time.Second
 )
