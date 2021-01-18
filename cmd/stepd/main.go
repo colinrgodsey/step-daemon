@@ -1,14 +1,14 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	gio "io"
 	"net"
 	"os"
 	"os/signal"
 	"runtime/trace"
-	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -24,12 +24,15 @@ const (
 	normalPlannerSize = 8
 )
 
-type argMap map[string]string
+var (
+	configPath string
+	devicePath string
+	baud       int
 
-func (a argMap) has(arg string) bool {
-	_, ok := a[arg]
-	return ok
-}
+	addr    string
+	doTrace bool
+	doProf  bool
+)
 
 func handler(head io.Conn, size int, h func(head, tail io.Conn)) (tail io.Conn) {
 	head = head.Flip()
@@ -40,9 +43,9 @@ func handler(head io.Conn, size int, h func(head, tail io.Conn)) (tail io.Conn) 
 	return
 }
 
-func stepdPipeline(c io.Conn, args argMap) io.Conn {
+func stepdPipeline(c io.Conn) io.Conn {
 	c = handler(c, normalPlannerSize, pipeline.SourceHandler)
-	c = handler(c, 1, pipeline.ConfigHandler(args["config"]))
+	c = handler(c, 1, pipeline.ConfigHandler(configPath))
 	c = handler(c, 1, pipeline.DeltaHandler)
 	c = handler(c, 1, pipeline.PhysicsHandler)
 	c = handler(c, pipeline.NumPages, pipeline.StepHandler)
@@ -50,30 +53,30 @@ func stepdPipeline(c io.Conn, args argMap) io.Conn {
 	return c
 }
 
-func bailArgs() {
-	out := []string{
-		"Required args (arg=value ...):",
-		"",
-		"config - Path to config file",
-		"device - Path to serial device",
-		"baud - Bad rate for serial device",
-		"",
-	}
-	for _, s := range out {
-		fmt.Println(s)
-	}
-	os.Exit(1)
-}
-
 func main() {
-	args := loadArgs()
+	flag.StringVar(&configPath, "config", "./config.hjson", "Path to HJSON config file")
+	flag.StringVar(&devicePath, "device", "", "Path to serial device")
+	flag.IntVar(&baud, "baud", 0, "Baud rate for serial device")
 
-	if args.has("trace") {
+	flag.BoolVar(&doTrace, "trace", false, "Enable tracing (debug)")
+	flag.BoolVar(&doProf, "prof", false, "Enable profiling (debug)")
+	flag.StringVar(&addr, "addr", "", "Test UI address (debug)")
+	flag.Parse()
+
+	if baud <= 0 {
+		fmt.Println("Baud flag required.")
+		os.Exit(1)
+	} else if devicePath == "" {
+		fmt.Println("Baud flag required.")
+		os.Exit(1)
+	}
+
+	if doTrace {
 		trace.Start(os.Stderr)
 		defer trace.Stop()
 	}
 
-	if args.has("prof") {
+	if doProf {
 		st := profile.Start()
 
 		go func() {
@@ -85,8 +88,8 @@ func main() {
 
 	c := io.NewConn(32, 32)
 	go io.LinePipe(os.Stdin, os.Stdout, c.Flip())
-	c = stepdPipeline(c, args)
-	tailSink(c, args)
+	c = stepdPipeline(c)
+	tailSink(c)
 }
 
 func closeOnExit(closer func()) {
@@ -98,55 +101,31 @@ func closeOnExit(closer func()) {
 	}()
 }
 
-func loadArgs() argMap {
-	out := make(argMap)
-	for _, arg := range os.Args {
-		spl := strings.SplitN(arg, "=", 2)
-		if len(spl) == 1 {
-			out[spl[0]] = ""
-		} else {
-			out[spl[0]] = spl[1]
-		}
-	}
-	return out
-}
-
 //TODO: need the auto restart loop here
-func tailSink(c io.Conn, args argMap) {
+func tailSink(c io.Conn) {
 	var tail gio.ReadWriteCloser
 	var err error
 
-	//TODO: switch to using "flags" library
-	if args.has("device") && args.has("baud") {
-		baud, err := strconv.Atoi(args["baud"])
-		if err != nil {
-			fmt.Println("Failed to parse baud")
-			bailArgs()
-		}
-
-		cfg := &serial.Config{Name: args["device"], Baud: baud}
+	if devicePath != "" && baud != 0 {
+		cfg := &serial.Config{Name: devicePath, Baud: baud}
 		tail, err = serial.OpenPort(cfg)
 		closeOnExit(func() {
 			fmt.Println("info:closing device serial")
 			tail.Close()
 			time.Sleep(3000)
 		})
-	} else if args.has("addr") {
-		tail, err = net.Dial("tcp", args["addr"])
-		if err != nil {
-			fmt.Println("Failed to connect to " + args["addr"])
-			fmt.Println(err)
-			bailArgs()
+	} else if addr != "" {
+		if tail, err = net.Dial("tcp", addr); err != nil {
+			err = fmt.Errorf("Failed to connect to %v: %w", addr, err)
 		}
-		/*bytes, _ := json.Marshal(conf)
-		tail.Write(bytes)
-		tail.Write([]byte("\n"))*/
 	} else {
-		bailArgs()
+		err = errors.New("Need to provide either device and baud, or addr")
 	}
 
 	if err != nil {
-		panic(fmt.Sprintf("Failed to open dest file %v: %v", os.Args[1], err))
+		err = fmt.Errorf("Failed to start stepd: %w", err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	io.LinePipe(tail, tail, c)

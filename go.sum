@@ -4,13 +4,9 @@ github.com/colinrgodsey/serial v0.0.0-20200722230255-f7ada0eda9cb h1:Q3RKOGgggXr
 github.com/colinrgodsey/serial v0.0.0-20200722230255-f7ada0eda9cb/go.mod h1:s6CTMHx/NV6uFgGR6LhBb6Ex71S3Z5KH2baxm4KLzn8=
 github.com/gerow/go-color v0.0.0-20140219113758-125d37f527f1 h1:DSA78HTfGC442ChonW9NdWuH5rsfJjTwsYwfIZhYjFo=
 github.com/gerow/go-color v0.0.0-20140219113758-125d37f527f1/go.mod h1:uN90NshmoiEU0ECs3cPdEg3wshS8kG9Zez9RmYPuL5A=
-github.com/hjson/hjson-go v3.0.1+incompatible h1:JwOXblcMiBbiWue7iPkoFK9oXSnW8n+qXh/0Fio6TCo=
-github.com/hjson/hjson-go v3.0.1+incompatible/go.mod h1:qsetwF8NlsTsOTwZTApNlTCerV+b2GjYRRcIk4JMFio=
 github.com/hjson/hjson-go v3.1.0+incompatible h1:DY/9yE8ey8Zv22bY+mHV1uk2yRy0h8tKhZ77hEdi0Aw=
 github.com/hjson/hjson-go v3.1.0+incompatible/go.mod h1:qsetwF8NlsTsOTwZTApNlTCerV+b2GjYRRcIk4JMFio=
 github.com/pkg/profile v1.5.0 h1:042Buzk+NhDI+DeSAA62RwJL8VAuZUMQZUjCsRz1Mug=
 github.com/pkg/profile v1.5.0/go.mod h1:qBsxPvzyUincmltOk6iyRVxHYg4adc0OFOv72ZdLa18=
-golang.org/x/sys v0.0.0-20200819171115-d785dc25833f h1:KJuwZVtZBVzDmEDtB2zro9CXkD9O0dpCv4o2LHbQIAw=
-golang.org/x/sys v0.0.0-20200819171115-d785dc25833f/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20210113181707-4bcb84eeeb78 h1:nVuTkr9L6Bq62qpUqKo/RnZCFfzDBL0bYo6w9OJUqZY=
 golang.org/x/sys v0.0.0-20210113181707-4bcb84eeeb78/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=

@@ -4,4 +4,5 @@ prof.pdf
 step-daemon
 trace.out
 cpu.pprof
-pipeline/bedlevel.json
+lib/pipeline/bedlevel.json
+stepd
