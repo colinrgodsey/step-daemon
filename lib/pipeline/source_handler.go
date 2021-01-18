@@ -29,10 +29,9 @@ func SourceHandler(head, tail io.Conn) {
 			if err != nil {
 				msg := fmt.Sprintf("error: failed parsing gcode (%v)", err)
 				head.Write(msg)
-				continue
 			}
 
-			if !g.IsM(110) {
+			if !g.IsM(110) && err == nil {
 				// send to tail before responding ok, incase tail blocks
 				tail.Write(g)
 			}
