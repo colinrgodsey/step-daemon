@@ -20,7 +20,10 @@ const (
 	//TODO: this is brittle... need to account for the exact configs we're expecting
 	confEnd = "echo:; Advanced:"
 
-	devSettingsTimeout = 10 * time.Second
+	checkActiveMagic = "__check_active__"
+
+	devSettingsTimeout = 15 * time.Second
+	readyWaitDelay     = 6 * time.Second
 )
 
 type cfHandler struct {
@@ -32,6 +35,7 @@ type cfHandler struct {
 	zFunc   bed.ZFunc
 
 	isReady   bool
+	active    bool
 	confReady chan struct{}
 }
 
@@ -68,8 +72,16 @@ func (h *cfHandler) tailRead(msg io.Any) {
 				close(h.confReady)
 				h.isReady = true
 			}
-		} else if msg == "pages_ready" {
+		} else if msg == "pages_ready" && !h.active {
+			h.active = true
 			h.gatherSettings()
+		} else if msg == checkActiveMagic {
+			// this device probably does not restart on connect
+			if !h.active {
+				h.head.Write("no page_ready seen, sending anyways")
+				h.tailRead("pages_ready")
+			}
+			return
 		} else if msg == "__send_config" {
 			bytes, err := json.Marshal(h.conf)
 			if err == nil {
@@ -152,6 +164,14 @@ func ConfigHandler(confPath string) func(_, _ io.Conn) {
 			}
 		}()
 
+		// some devices wont restart on connect, so lets
+		// check if active after a little bit.
+		go func() {
+			time.Sleep(readyWaitDelay)
+			tail.Flip().Wc() <- checkActiveMagic
+		}()
+
+		// delay sending upstream until ready
 		select {
 		case <-h.confReady: // wait for device config to be ready
 		case <-time.After(devSettingsTimeout):
