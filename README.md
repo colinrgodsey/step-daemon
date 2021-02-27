@@ -25,6 +25,7 @@ in hot spots where precision can be leveraged safely.
 ## Dependencies ##
 
 * **[Go](https://golang.org/)** (1.11+) must be installed from a system package or manually.
+* Please make sure that OpenJDK (11 preferred), socat and git are installed on the OctoPrint device. For raspbian, this can be done with: ```sudo apt install openjdk-11-jdk-headless socat git-core```
 
 ## Marlin Configuration ##
 * Update with [current compatible branch](hhttps://github.com/MarlinFirmware/Marlin).
