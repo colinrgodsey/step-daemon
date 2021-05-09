@@ -28,7 +28,7 @@ in hot spots where precision can be leveraged safely.
 * Please make sure that OpenJDK (11 preferred), socat and git are installed on the OctoPrint device. For raspbian, this can be done with: ```sudo apt install openjdk-11-jdk-headless socat git-core```
 
 ## Marlin Configuration ##
-* Update with [current compatible branch](hhttps://github.com/MarlinFirmware/Marlin).
+* Update with [current compatible branch](https://github.com/MarlinFirmware/Marlin).
 * Only XYZ cartesian builds currently supported (no core or delta support yet).
 * Baud rate of 250kbps or 500kbps suggested for 16MHz devices.
 * Enable *DIRECT_STEPPING* and *ADVANCED_OK*.
@@ -56,4 +56,3 @@ Plugin can be installed from this URL:
 ```
 https://raw.githubusercontent.com/colinrgodsey/maven/master/step-daemon/octoprint-plugin/latest.zip
 ```
-
