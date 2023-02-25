@@ -8,5 +8,5 @@ require (
 	github.com/gerow/go-color v0.0.0-20140219113758-125d37f527f1
 	github.com/hjson/hjson-go v3.1.0+incompatible
 	github.com/pkg/profile v1.5.0
-	golang.org/x/sys v0.0.0-20210113181707-4bcb84eeeb78 // indirect
+	golang.org/x/sys v0.1.0 // indirect
 )
