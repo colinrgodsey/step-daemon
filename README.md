@@ -39,8 +39,7 @@ in hot spots where precision can be leveraged safely.
   * Bed leveling results are retained locally as *bedlevel.json*.
 
 ## Configuration ##
-* Copy example config from *config.conf.example* to *config.conf*.
-* Modify config settings as needed. Units are in mm.
+* Modify `config.hjson` settings as needed. Units are in mm.
 * Baud rate should match value configured in Marlin.
 * Page format should match the format configured in Marlin (defaults to SP_4x2_256).
 
